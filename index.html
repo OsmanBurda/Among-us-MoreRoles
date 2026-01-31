@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Fixed Joystick</title>
+    <title>Among Us - Map Update</title>
     <style>
         body { margin: 0; background: #111; overflow: hidden; touch-action: none; }
         canvas { display: block; }
@@ -21,38 +21,45 @@
         let players = {};
         let myId;
         
-        // Sabit Joystick Ayarları
+        // Harita Nesneleri (Engeller)
+        const obstacles = [
+            { x: canvas.width/2 - 50, y: canvas.height/2 - 50, w: 100, h: 100, color: "#444", label: "MASA" }
+        ];
+
         const joystick = {
             active: false,
-            baseX: 80, 
-            baseY: canvas.height - 80,
-            currX: 80, 
-            currY: canvas.height - 80,
-            size: 45, 
-            stickSize: 22
+            baseX: 80, baseY: canvas.height - 80,
+            currX: 80, currY: canvas.height - 80,
+            size: 45, stickSize: 22
         };
 
-        socket.on('currentPlayers', (data) => { 
-            players = data; 
-            myId = socket.id;
-        });
+        socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
         socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
+        // Dokunmatik ve Joystick Mantığı
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX;
             const ty = e.touches[0].clientY;
-            // Joystick alanına dokunulup dokunulmadığını kontrol et
             const dist = Math.sqrt((tx - joystick.baseX)**2 + (ty - joystick.baseY)**2);
-            if (dist < joystick.size * 2) {
-                joystick.active = true;
-                updateJoystickPos(tx, ty);
-            }
+            if (dist < 100) joystick.active = true;
         });
 
         window.addEventListener("touchmove", (e) => {
             if (joystick.active) {
-                updateJoystickPos(e.touches[0].clientX, e.touches[0].clientY);
+                const tx = e.touches[0].clientX;
+                const ty = e.touches[0].clientY;
+                const dx = tx - joystick.baseX;
+                const dy = ty - joystick.baseY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const maxDist = joystick.size;
+                if (dist > maxDist) {
+                    joystick.currX = joystick.baseX + (dx / dist) * maxDist;
+                    joystick.currY = joystick.baseY + (dy / dist) * maxDist;
+                } else {
+                    joystick.currX = tx;
+                    joystick.currY = ty;
+                }
             }
         });
 
@@ -62,19 +69,14 @@
             joystick.currY = joystick.baseY;
         });
 
-        function updateJoystickPos(tx, ty) {
-            const dx = tx - joystick.baseX;
-            const dy = ty - joystick.baseY;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const maxDist = joystick.size;
-
-            if (dist > maxDist) {
-                joystick.currX = joystick.baseX + (dx / dist) * maxDist;
-                joystick.currY = joystick.baseY + (dy / dist) * maxDist;
-            } else {
-                joystick.currX = tx;
-                joystick.currY = ty;
+        function checkCollision(newX, newY) {
+            for (let obs of obstacles) {
+                if (newX > obs.x - 15 && newX < obs.x + obs.w + 15 &&
+                    newY > obs.y - 20 && newY < obs.y + obs.h + 20) {
+                    return true; // Çarpışma var
+                }
             }
+            return false;
         }
 
         function update() {
@@ -84,29 +86,35 @@
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 
                 if (dist > 5) {
-                    const speed = 3.5;
-                    players[myId].x += (dx / joystick.size) * speed;
-                    players[myId].y += (dy / joystick.size) * speed;
-                    socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                    const speed = 4;
+                    const nextX = players[myId].x + (dx / joystick.size) * speed;
+                    const nextY = players[myId].y + (dy / joystick.size) * speed;
+                    
+                    if (!checkCollision(nextX, nextY)) {
+                        players[myId].x = nextX;
+                        players[myId].y = nextY;
+                        socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                    }
                 }
             }
         }
 
-        function drawJoystick() {
-            // Dış halka (Sabit duran kısım)
-            ctx.beginPath();
-            ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-            ctx.fill();
-
-            // İç top (Hareket eden kısım)
-            ctx.beginPath();
-            ctx.arc(joystick.currX, joystick.currY, joystick.stickSize, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(0, 150, 255, 0.7)";
-            ctx.fill();
+        function drawMap() {
+            // Zemin Izgarası
+            ctx.strokeStyle = "#2c3e50";
+            for(let i=0; i<canvas.width; i+=60) {
+                ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
+            }
+            // Masalar (Engeller)
+            obstacles.forEach(obs => {
+                ctx.fillStyle = obs.color;
+                ctx.beginPath();
+                ctx.arc(obs.x + 50, obs.y + 50, 50, 0, Math.PI*2);
+                ctx.fill();
+                ctx.strokeStyle = "#222";
+                ctx.lineWidth = 5;
+                ctx.stroke();
+            });
         }
 
         function drawPlayer(p) {
@@ -117,10 +125,19 @@
         }
 
         function loop() {
-            ctx.fillStyle = "#111";
+            ctx.fillStyle = "#34495e"; // Uzay gemisi zemini rengi
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawMap();
             update();
-            drawJoystick();
+            
+            // Joystick çizimi
+            ctx.beginPath();
+            ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
+            ctx.strokeStyle = "white"; ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(joystick.currX, joystick.currY, joystick.stickSize, 0, Math.PI*2);
+            ctx.fillStyle = "rgba(0,150,255,0.7)"; ctx.fill();
+
             for (let id in players) drawPlayer(players[id]);
             requestAnimationFrame(loop);
         }
