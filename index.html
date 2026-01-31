@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us Online</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
-        body { margin: 0; background: #111; overflow: hidden; }
-        canvas { display: block; }
+        body { margin: 0; background: #222; overflow: hidden; }
+        canvas { display: block; background: #000; }
     </style>
 </head>
 <body>
@@ -20,33 +19,29 @@
 
         let players = {};
 
-        socket.on('currentPlayers', (serverPlayers) => { players = serverPlayers; });
-        socket.on('playerMoved', (p) => { if(players[p.id]) players[p.id] = p; });
+        socket.on('currentPlayers', (data) => { players = data; });
+        socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
-        // Telefondan dokunulan yere git
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX;
             const ty = e.touches[0].clientY;
             socket.emit('playerMovement', { x: tx, y: ty });
         });
 
-        function drawAmongUs(x, y, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x - 15, y - 20, 30, 40); // Gövde
-            ctx.fillStyle = "#87CEEB";
-            ctx.fillRect(x, y - 10, 20, 12); // Gözlük
-        }
-
-        function loop() {
+        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let id in players) {
                 const p = players[id];
-                drawAmongUs(p.x, p.y, p.color);
+                // Karakter Çizimi
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x - 15, p.y - 20, 30, 40);
+                ctx.fillStyle = "skyblue";
+                ctx.fillRect(p.x, p.y - 10, 15, 10);
             }
-            requestAnimationFrame(loop);
+            requestAnimationFrame(draw);
         }
-        loop();
+        draw();
     </script>
 </body>
 </html>
