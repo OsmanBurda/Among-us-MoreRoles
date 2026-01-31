@@ -2,9 +2,9 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Map Update</title>
+    <title>Among Us - Camera Follow</title>
     <style>
-        body { margin: 0; background: #111; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         canvas { display: block; }
     </style>
 </head>
@@ -15,15 +15,20 @@
         const socket = io();
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
+        
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
         let players = {};
         let myId;
         
-        // Harita Nesneleri (Engeller)
+        // Harita ve Kamera Ayarları
+        const MAP_SIZE = 2000;
+        const camera = { x: 0, y: 0 };
+
         const obstacles = [
-            { x: canvas.width/2 - 50, y: canvas.height/2 - 50, w: 100, h: 100, color: "#444", label: "MASA" }
+            { x: 500, y: 500, r: 60, color: "#444", label: "MASA 1" },
+            { x: 1200, y: 800, r: 80, color: "#444", label: "MASA 2" }
         ];
 
         const joystick = {
@@ -37,7 +42,6 @@
         socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
-        // Dokunmatik ve Joystick Mantığı
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX;
             const ty = e.touches[0].clientY;
@@ -69,13 +73,13 @@
             joystick.currY = joystick.baseY;
         });
 
-        function checkCollision(newX, newY) {
+        function checkCollision(nx, ny) {
             for (let obs of obstacles) {
-                if (newX > obs.x - 15 && newX < obs.x + obs.w + 15 &&
-                    newY > obs.y - 20 && newY < obs.y + obs.h + 20) {
-                    return true; // Çarpışma var
-                }
+                const dist = Math.sqrt((nx - obs.x)**2 + (ny - obs.y)**2);
+                if (dist < obs.r + 15) return true;
             }
+            // Harita sınırları
+            if (nx < 0 || nx > MAP_SIZE || ny < 0 || ny > MAP_SIZE) return true;
             return false;
         }
 
@@ -86,7 +90,7 @@
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 
                 if (dist > 5) {
-                    const speed = 4;
+                    const speed = 5;
                     const nextX = players[myId].x + (dx / joystick.size) * speed;
                     const nextY = players[myId].y + (dy / joystick.size) * speed;
                     
@@ -97,40 +101,58 @@
                     }
                 }
             }
-        }
-
-        function drawMap() {
-            // Zemin Izgarası
-            ctx.strokeStyle = "#2c3e50";
-            for(let i=0; i<canvas.width; i+=60) {
-                ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
+            
+            // KAMERA TAKİBİ: Kamerayı oyuncunun üzerine odakla
+            if (players[myId]) {
+                camera.x = players[myId].x - canvas.width / 2;
+                camera.y = players[myId].y - canvas.height / 2;
             }
-            // Masalar (Engeller)
-            obstacles.forEach(obs => {
-                ctx.fillStyle = obs.color;
-                ctx.beginPath();
-                ctx.arc(obs.x + 50, obs.y + 50, 50, 0, Math.PI*2);
-                ctx.fill();
-                ctx.strokeStyle = "#222";
-                ctx.lineWidth = 5;
-                ctx.stroke();
-            });
         }
 
         function drawPlayer(p) {
+            // Sadece kamera açısındakileri çiz
+            const screenX = p.x - camera.x;
+            const screenY = p.y - camera.y;
+
             ctx.fillStyle = p.color;
-            ctx.fillRect(p.x - 15, p.y - 20, 30, 40);
+            ctx.fillRect(screenX - 15, screenY - 20, 30, 40);
             ctx.fillStyle = "#87CEEB";
-            ctx.fillRect(p.x, p.y - 10, 15, 10);
+            ctx.fillRect(screenX, screenY - 10, 15, 10);
         }
 
         function loop() {
-            ctx.fillStyle = "#34495e"; // Uzay gemisi zemini rengi
+            ctx.fillStyle = "#222"; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            drawMap();
+            
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+            
+            // Harita Zemini
+            ctx.fillStyle = "#34495e";
+            ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
+            
+            // Izgara Çizgileri
+            ctx.strokeStyle = "#2c3e50";
+            for(let i=0; i<=MAP_SIZE; i+=100) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
+            }
+
+            // Engeller
+            obstacles.forEach(obs => {
+                ctx.fillStyle = obs.color;
+                ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "#111"; ctx.lineWidth = 5; ctx.stroke();
+            });
+
+            ctx.restore();
+
+            // Oyuncular (Kendi içlerinde kamera hesabını yapıyorlar)
+            for (let id in players) drawPlayer(players[id]);
+            
             update();
             
-            // Joystick çizimi
+            // Joystick Sabit Çizim (Kameradan etkilenmez)
             ctx.beginPath();
             ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
             ctx.strokeStyle = "white"; ctx.stroke();
@@ -138,7 +160,6 @@
             ctx.arc(joystick.currX, joystick.currY, joystick.stickSize, 0, Math.PI*2);
             ctx.fillStyle = "rgba(0,150,255,0.7)"; ctx.fill();
 
-            for (let id in players) drawPlayer(players[id]);
             requestAnimationFrame(loop);
         }
         loop();
