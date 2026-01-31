@@ -2,9 +2,9 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Osman'ın Yeni Üssü</title>
+    <title>Osman Özel Harita</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
     </style>
 </head>
@@ -23,27 +23,24 @@
         const MAP_SIZE = 4000;
         const camera = { x: 0, y: 0 };
 
-        // YENİ ÖZEL HARİTA TASARIMI
+        // HARİTA TASARIMI: Odalar ve onları birbirine bağlayan dolu koridorlar
         const obstacles = [
-            // --- ANA KONTROL MERKEZİ (ORTA) ---
-            { x: 1800, y: 1800, w: 400, h: 400, label: "KONTROL MERKEZİ", isRoom: true },
-            { x: 1950, y: 1950, r: 60, type: "circle" }, // Ana Bilgisayar Masası
+            // --- MERKEZ ODA (KAFETERYA GİBİ) ---
+            { x: 1800, y: 1800, w: 400, h: 400, label: "MERKEZ", isRoom: true },
+            { x: 1950, y: 1950, r: 50, type: "circle" }, 
 
-            // --- KORİDORLAR (GENİŞ VE FERAH) ---
-            { x: 1400, y: 1950, w: 400, h: 100, type: "rect" }, // Sol Koridor
-            { x: 2200, y: 1950, w: 400, h: 100, type: "rect" }, // Sağ Koridor
-            { x: 1950, y: 1400, w: 100, h: 400, type: "rect" }, // Üst Koridor
-            { x: 1950, y: 2200, w: 100, h: 400, type: "rect" }, // Alt Koridor
+            // --- DOLU KORİDORLAR (Kanallar) ---
+            // Her koridorun iki yanına duvar çekerek "içini dolu" ve yolu belirgin yaptım
+            { x: 1400, y: 1930, w: 400, h: 20, type: "rect" }, { x: 1400, y: 2050, w: 400, h: 20, type: "rect" }, // Sol yol duvarları
+            { x: 2200, y: 1930, w: 400, h: 20, type: "rect" }, { x: 2200, y: 2050, w: 400, h: 20, type: "rect" }, // Sağ yol duvarları
+            { x: 1930, y: 1400, w: 20, h: 400, type: "rect" }, { x: 2050, y: 1400, w: 20, h: 400, type: "rect" }, // Üst yol duvarları
+            { x: 1930, y: 2200, w: 20, h: 400, type: "rect" }, { x: 2050, y: 2200, w: 20, h: 400, type: "rect" }, // Alt yol duvarları
 
-            // --- ODALAR ---
-            { x: 900, y: 1800, w: 500, h: 400, label: "TEKNOLOJİ ODASI", isRoom: true }, // Sol
-            { x: 2600, y: 1800, w: 500, h: 400, label: "GÜVENLİK", isRoom: true }, // Sağ
-            { x: 1750, y: 900, w: 500, h: 500, label: "REAKTÖR", isRoom: true }, // Üst
-            { x: 1750, y: 2600, w: 500, h: 500, label: "YAŞAM ALANI", isRoom: true }, // Alt
-
-            // Süslemeler / Engeller
-            { x: 1000, y: 1900, r: 30, type: "circle" }, 
-            { x: 2700, y: 1900, r: 30, type: "circle" }
+            // --- YENİ YERLERİNDE ODALAR ---
+            { x: 800, y: 1800, w: 600, h: 500, label: "MOTOR ODASI", isRoom: true }, // Sol uca motor geldi
+            { x: 2600, y: 1800, w: 600, h: 500, label: "LABORATUVAR", isRoom: true }, // Sağ uca lab geldi
+            { x: 1750, y: 800, w: 500, h: 600, label: "DEPO", isRoom: true }, // Üste depo geldi
+            { x: 1750, y: 2600, w: 500, h: 600, label: "ARSİV", isRoom: true } // Alta arşiv geldi
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
@@ -97,24 +94,16 @@
         }
 
         function loop() {
-            ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
             ctx.save(); ctx.translate(-camera.x, -camera.y);
+            ctx.fillStyle = "#1e272e"; ctx.fillRect(0,0,MAP_SIZE,MAP_SIZE);
             
-            // Arka Plan Deseni (Grid)
-            ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 2;
-            for(let i=0; i<MAP_SIZE; i+=100) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
-            }
-
             obstacles.forEach(obs => {
                 if(obs.isRoom) {
-                    ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 4;
-                    ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.fillStyle = "white"; ctx.font = "bold 20px Arial";
-                    ctx.fillText(obs.label, obs.x + 10, obs.y + 30);
+                    ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 5; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.fillStyle = "white"; ctx.font = "bold 22px Arial"; ctx.fillText(obs.label, obs.x + 10, obs.y + 35);
                 } else {
-                    ctx.fillStyle = "#2c3e50";
+                    ctx.fillStyle = "#34495e";
                     if(obs.type === "circle") {
                         ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI*2); ctx.fill();
                     } else { ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
@@ -125,19 +114,14 @@
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x-15, p.y-20, 30, 40);
                 ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x, p.y-10, 15, 10);
-                // İSİM YAZDIRMA (Hemen karakterin üstüne)
+                // İsimler karakterin üzerinde
                 ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.textAlign = "center";
-                ctx.fillText(p.name || "Oyuncu", p.x, p.y - 30);
+                ctx.fillText(p.name || "Osman", p.x, p.y - 30);
             }
             ctx.restore();
             update();
-            
-            // Joystick çizimi (Basit)
-            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(0, 255, 136, 0.5)"; ctx.fill();
-
+            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.stroke();
+            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(0,255,136,0.5)"; ctx.fill();
             requestAnimationFrame(loop);
         }
         loop();
