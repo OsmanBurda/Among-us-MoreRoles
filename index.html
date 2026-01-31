@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Map Expansion</title>
+    <title>Among Us - Skeld Map</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         canvas { display: block; }
@@ -20,31 +20,35 @@
 
         let players = {};
         let myId;
-        const MAP_SIZE = 2500;
+        const MAP_SIZE = 3000; 
         const camera = { x: 0, y: 0 };
 
-        // HARİTA TASARIMI: Masalar ve Oda Duvarları
+        // HARİTA TASARIMI: KAFETERYA VE DİĞER ODALAR
         const obstacles = [
             // Kafeterya Masaları (Merkez)
-            { x: 1000, y: 1000, r: 60, type: "circle" },
-            { x: 800, y: 850, r: 60, type: "circle" },
-            { x: 1200, y: 850, r: 60, type: "circle" },
-            { x: 800, y: 1150, r: 60, type: "circle" },
-            { x: 1200, y: 1150, r: 60, type: "circle" },
+            { x: 1500, y: 1500, r: 60, type: "circle" }, // Orta Masa
+            { x: 1350, y: 1350, r: 50, type: "circle" },
+            { x: 1650, y: 1350, r: 50, type: "circle" },
+            { x: 1350, y: 1650, r: 50, type: "circle" },
+            { x: 1650, y: 1650, r: 50, type: "circle" },
 
-            // Oda Duvarları (Dikdörtgenler: x, y, genişlik, yükseklik)
-            { x: 600, y: 700, w: 20, h: 600, type: "rect" }, // Sol Duvar
-            { x: 1400, y: 700, w: 20, h: 600, type: "rect" }, // Sağ Duvar
-            { x: 600, y: 700, w: 800, h: 20, type: "rect" }, // Üst Duvar
-            { x: 600, y: 1300, w: 300, h: 20, type: "rect" }, // Alt Kapı Yanı 1
-            { x: 1100, y: 1300, w: 300, h: 20, type: "rect" }  // Alt Kapı Yanı 2
+            // KAFETERYA DUVARLARI
+            { x: 1200, y: 1200, w: 600, h: 20, type: "rect" }, // Üst
+            { x: 1200, y: 1200, w: 20, h: 600, type: "rect" }, // Sol
+            { x: 1780, y: 1200, w: 20, h: 600, type: "rect" }, // Sağ
+            { x: 1200, y: 1800, w: 200, h: 20, type: "rect" }, // Alt Sol
+            { x: 1600, y: 1800, w: 200, h: 20, type: "rect" }, // Alt Sağ (Kapı boşluğu)
+
+            // DİĞER ODALAR (TASLAK)
+            { x: 900, y: 1400, w: 250, h: 300, type: "rect", label: "MedBay" }, // Medbay
+            { x: 1850, y: 1300, w: 300, h: 200, type: "rect", label: "O2" },     // O2
+            { x: 1850, y: 1000, w: 400, h: 250, type: "rect", label: "Weapons"} // Weapons
         ];
 
         socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
         socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
-        // Kontroller (Joystick ayarları aynı kalıyor)
         const joystick = { active: false, baseX: 80, baseY: canvas.height-80, currX: 80, currY: canvas.height-80, size: 45, stickSize: 22 };
 
         window.addEventListener("touchstart", (e) => {
@@ -72,7 +76,7 @@
                     if (nx > obs.x - 15 && nx < obs.x + obs.w + 15 && ny > obs.y - 15 && ny < obs.y + obs.h + 15) return true;
                 }
             }
-            return nx < 0 || nx > MAP_SIZE || ny < 0 || ny > MAP_SIZE;
+            return nx < 50 || nx > MAP_SIZE-50 || ny < 50 || ny > MAP_SIZE-50;
         }
 
         function update() {
@@ -89,30 +93,37 @@
                     }
                 }
             }
-            if (players[myId]) { camera.x = players[myId].x - canvas.width/2; camera.y = players[myId].y - canvas.height/2; }
+            if (players[myId]) { 
+                camera.x = players[myId].x - canvas.width/2; 
+                camera.y = players[myId].y - canvas.height/2; 
+            }
         }
 
         function drawMap() {
-            ctx.fillStyle = "#34495e"; ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
-            ctx.strokeStyle = "#2c3e50";
+            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
+            ctx.strokeStyle = "#1a252f"; ctx.lineWidth = 2;
             for(let i=0; i<=MAP_SIZE; i+=100) {
                 ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,MAP_SIZE); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(MAP_SIZE,i); ctx.stroke();
             }
             obstacles.forEach(obs => {
-                ctx.fillStyle = "#444";
+                ctx.fillStyle = "#34495e";
                 if (obs.type === "circle") {
                     ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI*2); ctx.fill();
-                    ctx.strokeStyle = "#111"; ctx.lineWidth = 4; ctx.stroke();
+                    ctx.strokeStyle = "#111"; ctx.lineWidth = 5; ctx.stroke();
                 } else {
                     ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.strokeStyle = "#111"; ctx.lineWidth = 2; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.strokeStyle = "#111"; ctx.lineWidth = 3; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                    if(obs.label) {
+                        ctx.fillStyle = "white"; ctx.font = "20px Arial";
+                        ctx.fillText(obs.label, obs.x + 10, obs.y + 30);
+                    }
                 }
             });
         }
 
         function loop() {
-            ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save(); ctx.translate(-camera.x, -camera.y);
             drawMap();
             for (let id in players) {
@@ -122,7 +133,7 @@
             }
             ctx.restore();
             update();
-            // Joystick çizimi
+            // Joystick
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stickSize, 0, Math.PI*2); ctx.fillStyle = "rgba(0,150,255,0.7)"; ctx.fill();
             requestAnimationFrame(loop);
