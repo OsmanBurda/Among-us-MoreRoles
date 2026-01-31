@@ -5,10 +5,20 @@ const io = require('socket.io')(http);
 app.use(express.static(__dirname + '/'));
 
 let players = {};
+const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
+
 io.on('connection', (socket) => {
-    // Doğuş yeri: Kafeterya orta boşluk
-    players[socket.id] = { id: socket.id, x: 750, y: 300, color: 'red', name: "Osman" };
+    // Haritadaki Kafeterya boşluğu (Resim ölçeğine göre)
+    players[socket.id] = { 
+        id: socket.id, 
+        x: 800, 
+        y: 350, 
+        color: colors[Math.floor(Math.random() * colors.length)], 
+        name: "Osman" 
+    };
+
     io.emit('currentPlayers', players);
+
     socket.on('playerMovement', (data) => {
         if (players[socket.id]) { 
             players[socket.id].x = data.x; 
@@ -16,6 +26,12 @@ io.on('connection', (socket) => {
             socket.broadcast.emit('playerMoved', players[socket.id]); 
         }
     });
-    socket.on('disconnect', () => { delete players[socket.id]; io.emit('playerDisconnected', socket.id); });
+
+    socket.on('disconnect', () => { 
+        delete players[socket.id]; 
+        io.emit('playerDisconnected', socket.id); 
+    });
 });
-http.listen(process.env.PORT || 3000);
+
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => console.log(`Sunucu ${PORT} portunda aktif.`));
