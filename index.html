@@ -2,17 +2,15 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Osman Skeld Pro</title>
+    <title>The Skeld - Osman Edition</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
-        canvas { display: block; background: #111; }
-        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 10px; background: red; color: white; border: none; border-radius: 5px; z-index: 100; font-size: 12px; }
+        #adminBtn { position: fixed; top: 10px; right: 10px; background: #ff4757; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; z-index: 100; }
     </style>
 </head>
 <body>
-    <button id="adminBtn" onclick="alert('Şifre: 123Osman123Burda')">ADMİN</button>
+    <button id="adminBtn" onclick="alert('Admin Paneli Aktif!')">ADMİN</button>
     <canvas id="game"></canvas>
-    
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -25,100 +23,101 @@
         let myId;
         const camera = { x: 0, y: 0 };
 
-        // SENİN GÖNDERDİĞİN KOORDİNATLAR (Birebir)
+        // KORDİNATLARIN 5 KAT BÜYÜTÜLMÜŞ HALİ
         const colliders = [
-          { x: 0, y: 0, w: 600, h: 20 }, { x: 0, y: 380, w: 600, h: 20 },
-          { x: 0, y: 0, w: 20, h: 400 }, { x: 580, y: 0, w: 20, h: 400 },
-          { x: 180, y: 40, w: 240, h: 20 }, { x: 180, y: 40, w: 20, h: 140 },
-          { x: 400, y: 40, w: 20, h: 140 }, { x: 180, y: 160, w: 240, h: 20 },
-          { x: 232, y: 52, w: 36, h: 36, isObj: true }, { x: 312, y: 52, w: 36, h: 36, isObj: true },
-          { x: 272, y: 92, w: 36, h: 36, isObj: true }, { x: 232, y: 132, w: 36, h: 36, isObj: true },
-          { x: 312, y: 132, w: 36, h: 36, isObj: true }, { x: 420, y: 40, w: 120, h: 20 },
-          { x: 420, y: 40, w: 20, h: 80 }, { x: 520, y: 40, w: 20, h: 80 },
-          { x: 140, y: 160, w: 40, h: 100 }, { x: 150, y: 190, w: 20, h: 40 },
-          { x: 60, y: 220, w: 120, h: 20 }, { x: 60, y: 220, w: 20, h: 100 },
-          { x: 160, y: 220, w: 20, h: 100 }, { x: 80, y: 260, w: 40, h: 30 },
-          { x: 200, y: 240, w: 200, h: 20 }, { x: 200, y: 240, w: 20, h: 120 },
-          { x: 380, y: 240, w: 20, h: 120 }, { x: 240, y: 270, w: 30, h: 30, isObj: true },
-          { x: 300, y: 270, w: 30, h: 30, isObj: true }, { x: 270, y: 320, w: 30, h: 30, isObj: true },
-          { x: 420, y: 200, w: 120, h: 20 }, { x: 420, y: 200, w: 20, h: 100 },
-          { x: 520, y: 200, w: 20, h: 100 }, { x: 460, y: 230, w: 40, h: 40, isObj: true }
+          // Dış Sınırlar
+          { x: 0, y: 0, w: 3000, h: 100 }, { x: 0, y: 1900, w: 3000, h: 100 },
+          { x: 0, y: 0, w: 100, h: 2000 }, { x: 2900, y: 0, w: 100, h: 2000 },
+          
+          // Cafeteria (Yeşil Çizgi)
+          { x: 900, y: 200, w: 1200, h: 100, label: "CAFETERIA", color: "#2ecc71" },
+          { x: 900, y: 200, w: 100, h: 700 }, { x: 2000, y: 200, w: 100, h: 700 },
+          { x: 900, y: 800, w: 1200, h: 100 },
+          
+          // Masalar (Engel)
+          { x: 1160, y: 260, w: 180, h: 180, isObj: true }, { x: 1560, y: 260, w: 180, h: 180, isObj: true },
+          { x: 1360, y: 460, w: 180, h: 180, isObj: true }, { x: 1160, y: 660, w: 180, h: 180, isObj: true },
+          { x: 1560, y: 660, w: 180, h: 180, isObj: true },
+
+          // Weapons (Mavi Çizgi)
+          { x: 2100, y: 200, w: 600, h: 100, label: "WEAPONS", color: "#3498db" },
+          { x: 2100, y: 200, w: 100, h: 400 }, { x: 2600, y: 200, w: 100, h: 400 },
+
+          // Medbay
+          { x: 700, y: 800, w: 200, h: 500, label: "MEDBAY", color: "#3498db" },
+
+          // Storage & Admin
+          { x: 1000, y: 1200, w: 1000, h: 100, label: "STORAGE", color: "#3498db" },
+          { x: 2100, y: 1000, w: 600, h: 100, label: "ADMIN", color: "#3498db" }
         ];
 
-        const joystick = { active: false, baseX: 80, baseY: canvas.height - 80, currX: 80, currY: canvas.height - 80, size: 40, stick: 20 };
+        const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
 
         socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
         socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
-        // Çarpışma Testi
-        function checkCollision(nx, ny) {
-            const pSize = 8; // Küçük haritaya göre oyuncu boyutu
-            for (let c of colliders) {
-                if (nx + pSize > c.x && nx - pSize < c.x + c.w && ny + pSize > c.y && ny - pSize < c.y + c.h) return true;
-            }
-            return false;
-        }
-
-        // Hareket ve Kamera
         function update() {
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX) / joystick.size;
                 const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                const speed = 3; 
-                const nextX = players[myId].x + dx * speed;
-                const nextY = players[myId].y + dy * speed;
-                if (!checkCollision(nextX, nextY)) {
-                    players[myId].x = nextX; players[myId].y = nextY;
-                    socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                const speed = 7; // Büyük harita olduğu için hızlandırdım
+                const nx = players[myId].x + dx * speed;
+                const ny = players[myId].y + dy * speed;
+                
+                let collision = false;
+                for (let c of colliders) {
+                    // Objeler ve duvarlar çarpışma yapar, label olan odalar sadece görseldir
+                    if (!c.label && nx > c.x-20 && nx < c.x + c.w+20 && ny > c.y-20 && ny < c.y + c.h+20) collision = true;
+                    if (c.isObj && nx > c.x-20 && nx < c.x + c.w+20 && ny > c.y-20 && ny < c.y + c.h+20) collision = true;
+                }
+                
+                if (!collision) {
+                    players[myId].x = nx; players[myId].y = ny;
+                    socket.emit('playerMovement', { x: nx, y: ny });
                 }
             }
             if (players[myId]) {
-                camera.x = players[myId].x * 3 - canvas.width / 2;
-                camera.y = players[myId].y * 3 - canvas.height / 2;
+                camera.x = players[myId].x - canvas.width / 2;
+                camera.y = players[myId].y - canvas.height / 2;
             }
         }
 
         function loop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.translate(-camera.x, -camera.y);
-            ctx.scale(3, 3); // Haritayı net görmek için 3 kat büyütüyoruz
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.save(); ctx.translate(-camera.x, -camera.y);
 
-            // Çizimler
             colliders.forEach(c => {
-                ctx.fillStyle = c.isObj ? "#555" : "#333";
-                ctx.fillRect(c.x, c.y, c.w, c.h);
-                ctx.strokeStyle = "#444";
-                ctx.strokeRect(c.x, c.y, c.w, c.h);
+                if (c.label) {
+                    ctx.strokeStyle = c.color; ctx.lineWidth = 4;
+                    ctx.strokeRect(c.x, c.y, c.w, c.h);
+                    ctx.fillStyle = "white"; ctx.font = "bold 40px Arial";
+                    ctx.fillText(c.label, c.x + 20, c.y + 60);
+                } else {
+                    ctx.fillStyle = c.isObj ? "#444" : "#222";
+                    ctx.fillRect(c.x, c.y, c.w, c.h);
+                }
             });
 
             for (let id in players) {
                 const p = players[id];
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x - 5, p.y - 7, 10, 14); // Karakter
-                ctx.fillStyle = "white";
-                ctx.font = "5px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText(p.name || "Osman", p.x, p.y - 10);
+                ctx.fillStyle = p.color; ctx.fillRect(p.x - 20, p.y - 30, 40, 60); // Karakter büyütüldü
+                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x, p.y - 15, 20, 15); // Cam
+                ctx.fillStyle = "white"; ctx.font = "20px Arial"; ctx.textAlign = "center";
+                ctx.fillText(p.name, p.x, p.y - 40);
             }
             ctx.restore();
 
-            // Joystick Çizimi
+            // Joystick
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.fill();
+            ctx.strokeStyle = "white"; ctx.stroke();
+            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 30, 0, Math.PI*2);
+            ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fill();
 
-            update();
-            requestAnimationFrame(loop);
+            update(); requestAnimationFrame(loop);
         }
 
-        // Kontroller
-        window.addEventListener("touchstart", e => {
-            const t = e.touches[0];
-            if (t.clientX < 200 && t.clientY > canvas.height - 200) joystick.active = true;
-        });
+        window.addEventListener("touchstart", e => { joystick.active = true; });
         window.addEventListener("touchmove", e => {
             if (joystick.active) {
                 const t = e.touches[0];
