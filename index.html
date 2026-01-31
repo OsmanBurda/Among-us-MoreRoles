@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Joystick Edition</title>
+    <title>Among Us - Fixed Joystick</title>
     <style>
         body { margin: 0; background: #111; overflow: hidden; touch-action: none; }
         canvas { display: block; }
@@ -21,12 +21,15 @@
         let players = {};
         let myId;
         
-        // Joystick Ayarları
+        // Sabit Joystick Ayarları
         const joystick = {
             active: false,
-            baseX: 100, baseY: canvas.height - 100,
-            currX: 100, currY: canvas.height - 100,
-            size: 50, stickSize: 25
+            baseX: 80, 
+            baseY: canvas.height - 80,
+            currX: 80, 
+            currY: canvas.height - 80,
+            size: 45, 
+            stickSize: 22
         };
 
         socket.on('currentPlayers', (data) => { 
@@ -36,30 +39,43 @@
         socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
-        // Dokunmatik Kontroller
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX;
             const ty = e.touches[0].clientY;
-            // Eğer ekranın sol tarafına dokunulursa joystick aktifleşsin
-            if (tx < canvas.width / 2) {
+            // Joystick alanına dokunulup dokunulmadığını kontrol et
+            const dist = Math.sqrt((tx - joystick.baseX)**2 + (ty - joystick.baseY)**2);
+            if (dist < joystick.size * 2) {
                 joystick.active = true;
-                joystick.currX = tx;
-                joystick.currY = ty;
-                joystick.baseX = tx;
-                joystick.baseY = ty;
+                updateJoystickPos(tx, ty);
             }
         });
 
         window.addEventListener("touchmove", (e) => {
             if (joystick.active) {
-                joystick.currX = e.touches[0].clientX;
-                joystick.currY = e.touches[0].clientY;
+                updateJoystickPos(e.touches[0].clientX, e.touches[0].clientY);
             }
         });
 
         window.addEventListener("touchend", () => {
             joystick.active = false;
+            joystick.currX = joystick.baseX;
+            joystick.currY = joystick.baseY;
         });
+
+        function updateJoystickPos(tx, ty) {
+            const dx = tx - joystick.baseX;
+            const dy = ty - joystick.baseY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const maxDist = joystick.size;
+
+            if (dist > maxDist) {
+                joystick.currX = joystick.baseX + (dx / dist) * maxDist;
+                joystick.currY = joystick.baseY + (dy / dist) * maxDist;
+            } else {
+                joystick.currX = tx;
+                joystick.currY = ty;
+            }
+        }
 
         function update() {
             if (joystick.active && players[myId]) {
@@ -68,45 +84,44 @@
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 
                 if (dist > 5) {
-                    const speed = 3;
-                    players[myId].x += (dx / dist) * speed;
-                    players[myId].y += (dy / dist) * speed;
+                    const speed = 3.5;
+                    players[myId].x += (dx / joystick.size) * speed;
+                    players[myId].y += (dy / joystick.size) * speed;
                     socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
                 }
             }
         }
 
         function drawJoystick() {
-            if (!joystick.active) return;
-            // Dış daire
+            // Dış halka (Sabit duran kısım)
             ctx.beginPath();
             ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(100, 150, 200, 0.3)";
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
             ctx.fill();
-            // İç çubuk (Stick)
+
+            // İç top (Hareket eden kısım)
             ctx.beginPath();
             ctx.arc(joystick.currX, joystick.currY, joystick.stickSize, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(0, 100, 255, 0.6)";
+            ctx.fillStyle = "rgba(0, 150, 255, 0.7)";
             ctx.fill();
         }
 
         function drawPlayer(p) {
             ctx.fillStyle = p.color;
-            ctx.fillRect(p.x - 15, p.y - 20, 30, 40); // Gövde
+            ctx.fillRect(p.x - 15, p.y - 20, 30, 40);
             ctx.fillStyle = "#87CEEB";
-            ctx.fillRect(p.x, p.y - 10, 15, 10); // Vizör
+            ctx.fillRect(p.x, p.y - 10, 15, 10);
         }
 
         function loop() {
-            ctx.fillStyle = "#222";
+            ctx.fillStyle = "#111";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
             update();
             drawJoystick();
-
-            for (let id in players) {
-                drawPlayer(players[id]);
-            }
+            for (let id in players) drawPlayer(players[id]);
             requestAnimationFrame(loop);
         }
         loop();
