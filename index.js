@@ -9,11 +9,11 @@ let players = {};
 const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
 
 io.on('connection', (socket) => {
-    // Doğuş noktası masanın altına çekildi (2000, 2150)
+    // Kafeterya masasının hemen yanında güvenli alanda doğuş
     players[socket.id] = {
         id: socket.id,
-        x: 2000,
-        y: 2150, 
+        x: 2350, 
+        y: 1700,
         color: colors[Math.floor(Math.random() * colors.length)],
         name: "Osman"
     };
@@ -34,5 +34,4 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Sunucu ${PORT} portunda aktif.`));
+http.listen(process.env.PORT || 3000, () => console.log('Server Hazır!'));
