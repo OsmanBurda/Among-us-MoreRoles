@@ -1,41 +1,37 @@
-const express = require("express");
+const express = require('express');
 const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
-app.use(express.static("public"));
+app.use(express.static(__dirname + '/'));
 
-const players = {};
+let players = {};
+const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
 
-io.on("connection", socket => {
-  players[socket.id] = {
-    x: 60,
-    y: 60,
-    color: `hsl(${Math.random()*360},100%,50%)`
-  };
-
-  socket.emit("currentPlayers", players);
-  socket.broadcast.emit("newPlayer", {
-    id: socket.id,
-    player: players[socket.id]
-  });
-
-  socket.on("move", data => {
-    if (players[socket.id]) {
-      players[socket.id].x = data.x;
-      players[socket.id].y = data.y;
-      socket.broadcast.emit("playerMoved", {
+io.on('connection', (socket) => {
+    // Kafeterya masasının hemen yanında güvenli alanda doğuş
+    players[socket.id] = {
         id: socket.id,
-        x: data.x,
-        y: data.y
-      });
-    }
-  });
+        x: 2350, 
+        y: 1700,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        name: "Osman"
+    };
 
-  socket.on("disconnect", () => {
-    delete players[socket.id];
-    io.emit("playerDisconnected", socket.id);
-  });
+    io.emit('currentPlayers', players);
+
+    socket.on('playerMovement', (movementData) => {
+        if (players[socket.id]) {
+            players[socket.id].x = movementData.x;
+            players[socket.id].y = movementData.y;
+            socket.broadcast.emit('playerMoved', players[socket.id]);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        delete players[socket.id];
+        io.emit('playerDisconnected', socket.id);
+    });
 });
 
-http.listen(process.env.PORT || 3000);
+http.listen(process.env.PORT || 3000, () => console.log('Server Hazır!'));
