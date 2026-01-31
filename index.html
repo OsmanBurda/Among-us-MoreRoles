@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Osman Özel Harita</title>
+    <title>Osman's New Skeld</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -23,31 +23,46 @@
         const MAP_SIZE = 4000;
         const camera = { x: 0, y: 0 };
 
-        // HARİTA TASARIMI: Odalar ve onları birbirine bağlayan dolu koridorlar
+        // HARİTA: Odalar aynı, yerler farklı, içleri dolu.
         const obstacles = [
-            // --- MERKEZ ODA (KAFETERYA GİBİ) ---
-            { x: 1800, y: 1800, w: 400, h: 400, label: "MERKEZ", isRoom: true },
-            { x: 1950, y: 1950, r: 50, type: "circle" }, 
+            // --- MERKEZ: KAFETERYA ---
+            { x: 1800, y: 1800, w: 400, h: 400, label: "CAFETERIA", isRoom: true },
+            { x: 2000, y: 2000, r: 50, type: "circle" }, // Ana masa
+            { x: 1850, y: 1850, r: 20, type: "circle" }, { x: 2150, y: 1850, r: 20, type: "circle" }, // Küçük masalar
 
-            // --- DOLU KORİDORLAR (Kanallar) ---
-            // Her koridorun iki yanına duvar çekerek "içini dolu" ve yolu belirgin yaptım
-            { x: 1400, y: 1930, w: 400, h: 20, type: "rect" }, { x: 1400, y: 2050, w: 400, h: 20, type: "rect" }, // Sol yol duvarları
-            { x: 2200, y: 1930, w: 400, h: 20, type: "rect" }, { x: 2200, y: 2050, w: 400, h: 20, type: "rect" }, // Sağ yol duvarları
-            { x: 1930, y: 1400, w: 20, h: 400, type: "rect" }, { x: 2050, y: 1400, w: 20, h: 400, type: "rect" }, // Üst yol duvarları
-            { x: 1930, y: 2200, w: 20, h: 400, type: "rect" }, { x: 2050, y: 2200, w: 20, h: 400, type: "rect" }, // Alt yol duvarları
+            // --- DOLU KORİDORLAR (KANALLAR) ---
+            { x: 1400, y: 1950, w: 400, h: 20, type: "rect" }, { x: 1400, y: 2030, w: 400, h: 20, type: "rect" }, // Sol kanal
+            { x: 2200, y: 1950, w: 400, h: 20, type: "rect" }, { x: 2200, y: 2030, w: 400, h: 20, type: "rect" }, // Sağ kanal
+            { x: 1970, y: 1400, w: 20, h: 400, type: "rect" }, { x: 2030, y: 1400, w: 20, h: 400, type: "rect" }, // Üst kanal
+            { x: 1970, y: 2200, w: 20, h: 400, type: "rect" }, { x: 2030, y: 2200, w: 20, h: 400, type: "rect" }, // Alt kanal
 
-            // --- YENİ YERLERİNDE ODALAR ---
-            { x: 800, y: 1800, w: 600, h: 500, label: "MOTOR ODASI", isRoom: true }, // Sol uca motor geldi
-            { x: 2600, y: 1800, w: 600, h: 500, label: "LABORATUVAR", isRoom: true }, // Sağ uca lab geldi
-            { x: 1750, y: 800, w: 500, h: 600, label: "DEPO", isRoom: true }, // Üste depo geldi
-            { x: 1750, y: 2600, w: 500, h: 600, label: "ARSİV", isRoom: true } // Alta arşiv geldi
+            // --- ODALAR VE İÇLERİ ---
+            // SOL: MEDBAY (Tarayıcı ve yataklar eklendi)
+            { x: 800, y: 1800, w: 600, h: 450, label: "MEDBAY", isRoom: true },
+            { x: 900, y: 1900, w: 80, h: 40, type: "rect" }, { x: 900, y: 2050, w: 80, h: 40, type: "rect" }, // Yataklar
+            { x: 1100, y: 2000, r: 35, type: "circle" }, // Scanner
+
+            // SAĞ: WEAPONS (Sandalyeler ve konsol)
+            { x: 2600, y: 1800, w: 600, h: 450, label: "WEAPONS", isRoom: true },
+            { x: 2900, y: 1850, w: 100, h: 20, type: "rect" }, // Silah konsolu
+            { x: 3050, y: 2000, r: 25, type: "circle" }, // Koltuk
+
+            // ÜST: ADMIN (Büyük masa ve kart okuyucu)
+            { x: 1750, y: 800, w: 500, h: 600, label: "ADMIN", isRoom: true },
+            { x: 1900, y: 1100, w: 200, h: 60, type: "rect" }, // Admin Masası
+            { x: 1800, y: 900, w: 40, h: 40, type: "rect" }, // Kart cihazı
+
+            // ALT: ELECTRICAL (Trafo ve paneller)
+            { x: 1750, y: 2600, w: 500, h: 600, label: "ELECTRICAL", isRoom: true },
+            { x: 1850, y: 2800, w: 50, h: 150, type: "rect" }, // Trafo 1
+            { x: 2050, y: 2800, w: 50, h: 150, type: "rect" }, // Trafo 2
+            { x: 1900, y: 3100, w: 200, h: 30, type: "rect" } // Panel
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
 
         socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
         socket.on('playerMoved', (p) => { players[p.id] = p; });
-        socket.on('playerDisconnected', (id) => { delete players[id]; });
 
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
@@ -82,9 +97,8 @@
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX)/joystick.size;
                 const dy = (joystick.currY - joystick.baseY)/joystick.size;
-                const speed = 7;
-                const nextX = players[myId].x + dx * speed;
-                const nextY = players[myId].y + dy * speed;
+                const nextX = players[myId].x + dx * 7;
+                const nextY = players[myId].y + dy * 7;
                 if (!checkCollision(nextX, nextY)) {
                     players[myId].x = nextX; players[myId].y = nextY;
                     socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
@@ -100,10 +114,10 @@
             
             obstacles.forEach(obs => {
                 if(obs.isRoom) {
-                    ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 5; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.fillStyle = "white"; ctx.font = "bold 22px Arial"; ctx.fillText(obs.label, obs.x + 10, obs.y + 35);
+                    ctx.strokeStyle = "#00d2ff"; ctx.lineWidth = 4; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.fillText(obs.label, obs.x + 10, obs.y + 30);
                 } else {
-                    ctx.fillStyle = "#34495e";
+                    ctx.fillStyle = "#485460";
                     if(obs.type === "circle") {
                         ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI*2); ctx.fill();
                     } else { ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
@@ -114,14 +128,13 @@
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x-15, p.y-20, 30, 40);
                 ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x, p.y-10, 15, 10);
-                // İsimler karakterin üzerinde
                 ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.textAlign = "center";
-                ctx.fillText(p.name || "Osman", p.x, p.y - 30);
+                ctx.fillText(p.name || "Oyuncu", p.x, p.y - 30);
             }
             ctx.restore();
             update();
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(0,255,136,0.5)"; ctx.fill();
+            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(0,150,255,0.5)"; ctx.fill();
             requestAnimationFrame(loop);
         }
         loop();
