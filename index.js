@@ -9,13 +9,13 @@ let players = {};
 const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
 
 io.on('connection', (socket) => {
-    // Her yeni oyuncu kafeteryada başlar (2000, 2000)
+    // Doğuş noktası masanın altına çekildi (2000, 2150)
     players[socket.id] = {
         id: socket.id,
         x: 2000,
-        y: 2000,
+        y: 2150, 
         color: colors[Math.floor(Math.random() * colors.length)],
-        name: "Osman" // Varsayılan isim
+        name: "Osman"
     };
 
     io.emit('currentPlayers', players);
