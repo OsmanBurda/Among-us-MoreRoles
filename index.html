@@ -2,9 +2,9 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Skeld Fixed</title>
+    <title>Among Us Fixed Map</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         canvas { display: block; }
     </style>
 </head>
@@ -23,31 +23,31 @@
         const MAP_SIZE = 4000;
         const camera = { x: 0, y: 0 };
 
-        // HARİTA TASARIMI (Hatalar düzeltildi, odalar bağlandı)
+        // HARİTA: Hatalar (H) düzeltildi, MedBay (M) ve Weapons (W) bağlandı
         const obstacles = [
-            // KAFETERYA MASALARI (Çarpışma aktif)
+            // KAFETERYA MASALARI
             { x: 2000, y: 1500, r: 65, type: "circle" },
             { x: 1830, y: 1350, r: 50, type: "circle" }, { x: 2170, y: 1350, r: 50, type: "circle" },
             { x: 1830, y: 1650, r: 50, type: "circle" }, { x: 2170, y: 1650, r: 50, type: "circle" },
 
-            // KAFETERYA DUVARLARI
-            { x: 1700, y: 1150, w: 600, h: 20, type: "rect" }, // Üst duvar
-            { x: 1700, y: 1150, w: 20, h: 250, type: "rect" }, // Sol üst köşe
-            { x: 1700, y: 1650, w: 20, h: 400, type: "rect" }, // Sol alt (Medbay yolu altı)
-            { x: 2280, y: 1150, w: 20, h: 250, type: "rect" }, // Sağ üst
-            { x: 2280, y: 1650, w: 20, h: 400, type: "rect" }, // Sağ alt
+            // DUVARLAR (Hatalı olanlar kaldırıldı/düzeltildi)
+            { x: 1700, y: 1150, w: 600, h: 20, type: "rect" }, // Üst Sınır
+            { x: 1700, y: 1150, w: 20, h: 250, type: "rect" }, // Sol Üst Duvar
+            { x: 1700, y: 1650, w: 20, h: 350, type: "rect" }, // Sol Alt Duvar
+            { x: 2280, y: 1150, w: 20, h: 250, type: "rect" }, // Sağ Üst
+            { x: 2280, y: 1650, w: 20, h: 350, type: "rect" }, // Sağ Alt
 
-            // MEDBAY (M) BAĞLANTISI VE KORİDORU
-            { x: 1300, y: 1400, w: 400, h: 20, type: "rect" }, // Koridor tavanı
-            { x: 1300, y: 1600, w: 400, h: 20, type: "rect" }, // Koridor zemini
-            { x: 900, y: 1350, w: 400, h: 450, type: "rect", label: "MEDBAY", isRoom: true },
+            // MEDBAY (M) KORİDOR VE ODA
+            { x: 1300, y: 1400, w: 400, h: 20, type: "rect" }, // Üst Koridor Duvarı
+            { x: 1300, y: 1600, w: 400, h: 20, type: "rect" }, // Alt Koridor Duvarı
+            { x: 900, y: 1350, w: 400, h: 450, type: "rect", label: "MedBay", isRoom: true },
 
-            // WEAPONS (W) BAĞLANTISI VE KORİDORU
-            { x: 2300, y: 1400, w: 400, h: 20, type: "rect" }, // Giriş yolu
-            { x: 2700, y: 1100, w: 500, h: 500, type: "rect", label: "WEAPONS", isRoom: true },
+            // WEAPONS (W) KORİDOR VE ODA
+            { x: 2300, y: 1400, w: 400, h: 20, type: "rect" }, // Giriş
+            { x: 2700, y: 1100, w: 500, h: 500, type: "rect", label: "Weapons", isRoom: true },
 
-            // ADMIN YOLU
-            { x: 2050, y: 2050, w: 300, h: 300, type: "rect", label: "ADMIN", isRoom: true }
+            // ADMIN
+            { x: 2050, y: 2050, w: 300, h: 300, type: "rect", label: "Admin", isRoom: true }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
@@ -58,7 +58,7 @@
 
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-            if (Math.sqrt((tx - joystick.baseX)**2 + (ty - joystick.baseY)**2) < 100) joystick.active = true;
+            if (Math.sqrt((tx-joystick.baseX)**2 + (ty-joystick.baseY)**2) < 100) joystick.active = true;
         });
         window.addEventListener("touchmove", (e) => {
             if (joystick.active) {
@@ -75,7 +75,7 @@
 
         function checkCollision(nx, ny) {
             for (let obs of obstacles) {
-                if (obs.isRoom) continue; 
+                if (obs.isRoom) continue;
                 if (obs.type === "circle") {
                     if (Math.sqrt((nx-obs.x)**2 + (ny-obs.y)**2) < obs.r + 15) return true;
                 } else {
@@ -87,33 +87,28 @@
 
         function update() {
             if (joystick.active && players[myId]) {
-                const dx = joystick.currX - joystick.baseX, dy = joystick.currY - joystick.baseY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > 5) {
-                    const speed = 6;
-                    const nextX = players[myId].x + (dx/joystick.size)*speed;
-                    const nextY = players[myId].y + (dy/joystick.size)*speed;
-                    if (!checkCollision(nextX, nextY)) {
-                        players[myId].x = nextX; players[myId].y = nextY;
-                        socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
-                    }
+                const dx = (joystick.currX - joystick.baseX)/joystick.size;
+                const dy = (joystick.currY - joystick.baseY)/joystick.size;
+                const speed = 6;
+                const nextX = players[myId].x + dx * speed;
+                const nextY = players[myId].y + dy * speed;
+                if (!checkCollision(nextX, nextY)) {
+                    players[myId].x = nextX; players[myId].y = nextY;
+                    socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
                 }
             }
-            if (players[myId]) {
-                camera.x = players[myId].x - canvas.width / 2;
-                camera.y = players[myId].y - canvas.height / 2;
-            }
+            if (players[myId]) { camera.x = players[myId].x - canvas.width/2; camera.y = players[myId].y - canvas.height/2; }
         }
 
         function loop() {
-            ctx.fillStyle = "#111"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#111"; ctx.fillRect(0,0,canvas.width,canvas.height);
             ctx.save(); ctx.translate(-camera.x, -camera.y);
+            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0,0,MAP_SIZE,MAP_SIZE);
             
-            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
             obstacles.forEach(obs => {
                 if(obs.isRoom) {
                     ctx.strokeStyle = "#00d2ff"; ctx.lineWidth = 5; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.fillStyle = "white"; ctx.font = "bold 25px Arial"; ctx.fillText(obs.label, obs.x + 15, obs.y + 35);
+                    ctx.fillStyle = "white"; ctx.font = "bold 25px Arial"; ctx.fillText(obs.label, obs.x+20, obs.y+40);
                 } else {
                     ctx.fillStyle = "#34495e";
                     if(obs.type === "circle") {
@@ -130,12 +125,8 @@
             }
             ctx.restore();
             update();
-
-            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "white"; ctx.lineWidth = 3; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(0, 150, 255, 0.6)"; ctx.fill();
-
+            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.lineWidth = 3; ctx.stroke();
+            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(0,150,255,0.6)"; ctx.fill();
             requestAnimationFrame(loop);
         }
         loop();
