@@ -9,11 +9,11 @@ let players = {};
 const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
 
 io.on('connection', (socket) => {
-    // DOĞUŞ NOKTASI GÜNCELLENDİ: Masaların tamamen dışında boş alandasın
+    // 2.5 Kat Ölçekli Güvenli Başlangıç
     players[socket.id] = {
         id: socket.id,
-        x: 1500, 
-        y: 1600, 
+        x: 750, 
+        y: 450, 
         color: colors[Math.floor(Math.random() * colors.length)],
         name: "Osman"
     };
