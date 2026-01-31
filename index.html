@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Fixed Map</title>
+    <title>Among Us - Skeld Final Map</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -23,32 +23,35 @@
         const MAP_SIZE = 4000;
         const camera = { x: 0, y: 0 };
 
-        // HARİTA TASARIMI: İşaretlediğin görsel hatalar (H) temizlendi
+        // HARİTA TASARIMI: Yuvarlak içindeki yerler "DOLU DUVAR" yapıldı.
         const obstacles = [
             // KAFETERYA MASALARI
             { x: 2000, y: 1500, r: 65, type: "circle" },
             { x: 1830, y: 1350, r: 50, type: "circle" }, { x: 2170, y: 1350, r: 50, type: "circle" },
             { x: 1830, y: 1650, r: 50, type: "circle" }, { x: 2170, y: 1650, r: 50, type: "circle" },
 
-            // KAFETERYA DUVARLARI (Koridor ağızları açıldı)
-            { x: 1700, y: 1150, w: 600, h: 20, type: "rect" }, // Üst
-            { x: 1700, y: 1150, w: 20, h: 250, type: "rect" }, // Sol Üst
-            { x: 1700, y: 1650, w: 20, h: 400, type: "rect" }, // Sol Alt
-            { x: 2280, y: 1150, w: 20, h: 250, type: "rect" }, // Sağ Üst
-            { x: 2280, y: 1650, w: 20, h: 400, type: "rect" }, // Sağ Alt
-
-            // MEDBAY (M) BAĞLANTISI
-            { x: 1200, y: 1400, w: 500, h: 20, type: "rect" }, // Üst Koridor
-            { x: 1200, y: 1600, w: 500, h: 20, type: "rect" }, // Alt Koridor
+            // ANA GÖVDE (Kafeterya ve Koridor Boşluklarını Dolduran Kalın Duvarlar)
+            { x: 1700, y: 1150, w: 600, h: 20, type: "rect" }, // Üst ana duvar
+            
+            // MEDBAY TARAFI (Yuvarlak içine aldığın yerler artık dolu)
+            { x: 1700, y: 1150, w: 20, h: 250, type: "rect" }, // Sol üst köşe
+            { x: 1700, y: 1600, w: 20, h: 100, type: "rect" }, // Medbay giriş altı (DOLU)
+            { x: 1200, y: 1400, w: 520, h: 30, type: "rect" }, // Medbay koridor üst kalın duvar
+            { x: 1200, y: 1600, w: 520, h: 30, type: "rect" }, // Medbay koridor alt kalın duvar
             { x: 800, y: 1350, w: 400, h: 450, type: "rect", label: "MEDBAY", isRoom: true },
 
-            // WEAPONS (W) BAĞLANTISI
-            { x: 2300, y: 1400, w: 500, h: 20, type: "rect" }, // Üst Koridor
-            { x: 2300, y: 1600, w: 500, h: 20, type: "rect" }, // Alt Koridor
-            { x: 2800, y: 1200, w: 500, h: 500, type: "rect", label: "WEAPONS", isRoom: true },
+            // WEAPONS TARAFI (Zaten doğruydu, sabitlendi)
+            { x: 2280, y: 1150, w: 20, h: 250, type: "rect" }, 
+            { x: 2280, y: 1400, w: 420, h: 20, type: "rect" }, 
+            { x: 2280, y: 1600, w: 420, h: 20, type: "rect" },
+            { x: 2700, y: 1100, w: 500, h: 500, type: "rect", label: "WEAPONS", isRoom: true },
 
-            // ADMIN
-            { x: 2050, y: 2050, w: 400, h: 400, type: "rect", label: "ADMIN", isRoom: true }
+            // ADMIN YOLU (Çizdiğin dikey çizgilere göre koridor yapıldı)
+            { x: 1720, y: 1700, w: 330, h: 20, type: "rect" }, // Admin yolu üst yatay
+            { x: 2050, y: 1700, w: 20, h: 500, type: "rect" }, // Admin sol dikey duvar (D'ye göre)
+            { x: 2150, y: 1700, w: 20, h: 500, type: "rect" }, // Admin sağ dikey duvar (D'ye göre)
+            { x: 2280, y: 1600, w: 20, h: 120, type: "rect" }, // Boşluk doldurma
+            { x: 1950, y: 2200, w: 450, h: 400, type: "rect", label: "ADMIN", isRoom: true }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
@@ -72,7 +75,9 @@
                 } else { joystick.currX = tx; joystick.currY = ty; }
             }
         });
-        window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
+        window.addEventListener("touchend", () => {
+            joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY;
+        });
 
         function checkCollision(nx, ny) {
             for (let obs of obstacles) {
@@ -90,7 +95,7 @@
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX)/joystick.size;
                 const dy = (joystick.currY - joystick.baseY)/joystick.size;
-                const speed = 6.5;
+                const speed = 6;
                 const nextX = players[myId].x + dx * speed;
                 const nextY = players[myId].y + dy * speed;
                 if (!checkCollision(nextX, nextY)) {
@@ -107,8 +112,6 @@
         function loop() {
             ctx.fillStyle = "#111"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.save(); ctx.translate(-camera.x, -camera.y);
-            
-            // Harita Arka Planı
             ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
             
             obstacles.forEach(obs => {
@@ -124,7 +127,6 @@
                 }
             });
 
-            // Oyuncular
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x-15, p.y-20, 30, 40);
@@ -133,7 +135,6 @@
             ctx.restore();
             update();
 
-            // Joystick
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
             ctx.strokeStyle = "white"; ctx.lineWidth = 3; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2);
