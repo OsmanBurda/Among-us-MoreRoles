@@ -13,10 +13,10 @@ app.get('/', (req, res) => {
 let players = {};
 
 io.on('connection', (socket) => {
-    // ÖNEMLİ: Yeni oyuncu tam Kafeterya masasında (2000, 1550) doğar
+    // Doğuş noktası masanın aşağısına çekildi
     players[socket.id] = {
         x: 2000, 
-        y: 1550, 
+        y: 1750, 
         color: "#" + Math.floor(Math.random()*16777215).toString(16),
         id: socket.id,
         name: "Osman"
@@ -40,6 +40,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log('Among Us Sunucusu 2000,1550 konumunda hazır!');
-});
+http.listen(PORT, () => console.log('Sunucu Başlatıldı!'));
