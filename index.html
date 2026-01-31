@@ -1,155 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Skeld - Osman Edition</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
-        canvas { display: block; }
-        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 12px; background: #e74c3c; color: white; border: 2px solid #c0392b; border-radius: 8px; font-weight: bold; z-index: 100; }
-        #adminPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; background: rgba(0,0,0,0.95); border: 3px solid #3498db; color: white; padding: 20px; display: none; z-index: 101; text-align: center; border-radius: 15px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Among Us Map</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    canvas {
+      background: #2b2b2b;
+      border: 2px solid #444;
+    }
+  </style>
 </head>
 <body>
-    <button id="adminBtn">ADMİN PANEL</button>
-    <div id="adminPanel">
-        <h2>ADMİN KONTROL</h2>
-        <p>Giriş: 123Osman123Burda</p>
-        <button onclick="location.reload()" style="padding:10px;">OYUNU RESETLE</button><br><br>
-        <button onclick="document.getElementById('adminPanel').style.display='none'">KAPAT</button>
-    </div>
 
-    <canvas id="game"></canvas>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+<canvas id="game" width="600" height="400"></canvas>
 
-        document.getElementById('adminBtn').onclick = () => document.getElementById('adminPanel').style.display='block';
-
-        let players = {};
-        let myId;
-        const MAP_W = 5000, MAP_H = 3500;
-        const camera = { x: 0, y: 0 };
-
-        // TÜM SKELD ODALARI VE İÇLERİ (Dolu Hali)
-        const obstacles = [
-            // CAFETERIA
-            { x: 2200, y: 1400, w: 600, h: 600, label: "CAFETERIA", isRoom: true },
-            { x: 2500, y: 1700, r: 60, type: "circle" }, // Orta Masa
-            { x: 2180, y: 1380, w: 640, h: 20, type: "rect" }, // Üst Duvar
-            { x: 2180, y: 2000, w: 640, h: 20, type: "rect" }, // Alt Duvar
-
-            // MEDBAY (Sol Üst)
-            { x: 1600, y: 1400, w: 400, h: 500, label: "MEDBAY", isRoom: true },
-            { x: 1700, y: 1500, w: 60, h: 100, type: "rect" }, // Yatak 1
-            { x: 1850, y: 1700, r: 30, type: "circle" }, // Scanner
-
-            // ELECTRICAL (Sol Alt)
-            { x: 1600, y: 2300, w: 450, h: 500, label: "ELECTRICAL", isRoom: true },
-            { x: 1700, y: 2400, w: 40, h: 120, type: "rect" }, // Panel
-            { x: 1850, y: 2400, w: 40, h: 120, type: "rect" }, // Trafo
-
-            // WEAPONS (Sağ Üst)
-            { x: 2950, y: 1100, w: 450, h: 400, label: "WEAPONS", isRoom: true },
-            { x: 3200, y: 1200, w: 100, h: 30, type: "rect" }, // Konsol
-
-            // ADMIN (Sağ Alt)
-            { x: 2300, y: 2150, w: 450, h: 400, label: "ADMIN", isRoom: true },
-            { x: 2450, y: 2300, w: 150, h: 80, type: "rect" }, // Admin Masası
-
-            // KORİDORLAR (İçi Dolu Kanallar)
-            { x: 2100, y: 1650, w: 100, h: 100, type: "rect" }, // Batı Koridor Girişi
-            { x: 2800, y: 1650, w: 100, h: 100, type: "rect" }, // Doğu Koridor Girişi
-            { x: 2450, y: 1300, w: 100, h: 100, type: "rect" }, // Kuzey Koridor Girişi
-            { x: 2450, y: 2000, w: 100, h: 150, type: "rect" }  // Güney Koridor Girişi
-        ];
-
-        const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
-
-        socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
-        socket.on('playerMoved', (p) => { players[p.id] = p; });
-        socket.on('playerDisconnected', (id) => { delete players[id]; });
-
-        // Touch Hareketleri
-        window.addEventListener("touchstart", (e) => {
-            const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-            if (Math.sqrt((tx-joystick.baseX)**2 + (ty-joystick.baseY)**2) < 100) joystick.active = true;
-        });
-        window.addEventListener("touchmove", (e) => {
-            if (joystick.active) {
-                const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
-                const dx = tx - joystick.baseX, dy = ty - joystick.baseY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > joystick.size) {
-                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
-                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
-                } else { joystick.currX = tx; joystick.currY = ty; }
-            }
-        });
-        window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
-
-        function checkCollision(nx, ny) {
-            for (let obs of obstacles) {
-                if (obs.isRoom) continue;
-                if (obs.type === "circle") {
-                    if (Math.sqrt((nx-obs.x)**2 + (ny-obs.y)**2) < obs.r + 15) return true;
-                } else {
-                    if (nx > obs.x-15 && nx < obs.x+obs.w+15 && ny > obs.y-15 && ny < obs.y+obs.h+15) return true;
-                }
-            }
-            return nx < 50 || nx > MAP_W-50 || ny < 50 || ny > MAP_H-50;
-        }
-
-        function update() {
-            if (joystick.active && players[myId]) {
-                const dx = (joystick.currX - joystick.baseX)/joystick.size;
-                const dy = (joystick.currY - joystick.baseY)/joystick.size;
-                const nextX = players[myId].x + dx * 8;
-                const nextY = players[myId].y + dy * 8;
-                if (!checkCollision(nextX, nextY)) {
-                    players[myId].x = nextX; players[myId].y = nextY;
-                    socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
-                }
-            }
-            if (players[myId]) { camera.x = players[myId].x - canvas.width/2; camera.y = players[myId].y - canvas.height/2; }
-        }
-
-        function loop() {
-            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.save(); ctx.translate(-camera.x, -camera.y);
-            ctx.fillStyle = "#1e272e"; ctx.fillRect(0,0,MAP_W,MAP_H);
-            
-            obstacles.forEach(obs => {
-                if(obs.isRoom) {
-                    ctx.strokeStyle = "#00d2ff"; ctx.lineWidth = 5; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.fillStyle = "white"; ctx.font = "bold 22px Arial"; ctx.fillText(obs.label, obs.x + 15, obs.y + 40);
-                } else {
-                    ctx.fillStyle = "#485460";
-                    if(obs.type === "circle") {
-                        ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI*2); ctx.fill();
-                    } else { ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
-                }
-            });
-
-            for (let id in players) {
-                const p = players[id];
-                ctx.fillStyle = p.color; ctx.fillRect(p.x-15, p.y-20, 30, 40);
-                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x, p.y-10, 15, 10);
-                ctx.fillStyle = "white"; ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
-                ctx.fillText(p.name, p.x, p.y - 30);
-            }
-            ctx.restore();
-            update();
-            // Joystick Draw
-            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(0,255,136,0.5)"; ctx.fill();
-            requestAnimationFrame(loop);
-        }
-        loop();
-    </script>
+<script src="index.js"></script>
 </body>
 </html>
