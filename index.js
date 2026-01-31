@@ -13,10 +13,10 @@ app.get('/', (req, res) => {
 let players = {};
 
 io.on('connection', (socket) => {
-    // Doğuş noktası masanın aşağısına çekildi
+    // DOĞUŞ NOKTASI: Masanın tamamen dışında, açık alanda başlar
     players[socket.id] = {
         x: 2000, 
-        y: 1750, 
+        y: 1850, 
         color: "#" + Math.floor(Math.random()*16777215).toString(16),
         id: socket.id,
         name: "Osman"
@@ -40,4 +40,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log('Sunucu Başlatıldı!'));
+http.listen(PORT, () => console.log('Sunucu 3000 portunda aktif!'));
