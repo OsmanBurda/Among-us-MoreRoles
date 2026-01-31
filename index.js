@@ -13,35 +13,27 @@ app.get('/', (req, res) => {
 let players = {};
 
 io.on('connection', (socket) => {
-    console.log('Bağlantı başarılı:', socket.id);
-
-    // Yeni oyuncuyu oluştur (Harita ortasında başlat)
+    // ÖNEMLİ: Yeni oyuncu tam Kafeterya masasında (2000, 1550) doğar
     players[socket.id] = {
-        x: 150,
-        y: 150,
+        x: 2000, 
+        y: 1550, 
         color: "#" + Math.floor(Math.random()*16777215).toString(16),
         id: socket.id,
-        name: "Osman" // Varsayılan isim
+        name: "Osman"
     };
 
-    // Tüm oyuncuları yeni gelene bildir
     socket.emit('currentPlayers', players);
-    
-    // Yeni oyuncuyu diğerlerine bildir
     socket.broadcast.emit('newPlayer', players[socket.id]);
 
-    // Hareket verisi senkronizasyonu
     socket.on('playerMovement', (movementData) => {
         if (players[socket.id]) {
             players[socket.id].x = movementData.x;
             players[socket.id].y = movementData.y;
-            // Diğer oyunculara bu oyuncunun yerini söyle
             socket.broadcast.emit('playerMoved', players[socket.id]);
         }
     });
 
     socket.on('disconnect', () => {
-        console.log('Oyuncu ayrıldı:', socket.id);
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
     });
@@ -49,5 +41,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log('Among Us Sunucusu Hazır!');
+    console.log('Among Us Sunucusu 2000,1550 konumunda hazır!');
 });
