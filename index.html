@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Skeld Map</title>
+    <title>Among Us - Real Skeld Map</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         canvas { display: block; }
@@ -20,29 +20,35 @@
 
         let players = {};
         let myId;
-        const MAP_SIZE = 3000; 
+        const MAP_SIZE = 4000; 
         const camera = { x: 0, y: 0 };
 
-        // HARİTA TASARIMI: KAFETERYA VE DİĞER ODALAR
+        // HARİTA TASARIMI (Görsele göre bağlantılı odalar)
         const obstacles = [
-            // Kafeterya Masaları (Merkez)
-            { x: 1500, y: 1500, r: 60, type: "circle" }, // Orta Masa
-            { x: 1350, y: 1350, r: 50, type: "circle" },
-            { x: 1650, y: 1350, r: 50, type: "circle" },
-            { x: 1350, y: 1650, r: 50, type: "circle" },
-            { x: 1650, y: 1650, r: 50, type: "circle" },
+            // KAFETERYA (Merkez - 5 Masa)
+            { x: 2000, y: 1500, r: 60, type: "circle" }, // Orta
+            { x: 1850, y: 1350, r: 50, type: "circle" }, { x: 2150, y: 1350, r: 50, type: "circle" },
+            { x: 1850, y: 1650, r: 50, type: "circle" }, { x: 2150, y: 1650, r: 50, type: "circle" },
 
-            // KAFETERYA DUVARLARI
-            { x: 1200, y: 1200, w: 600, h: 20, type: "rect" }, // Üst
-            { x: 1200, y: 1200, w: 20, h: 600, type: "rect" }, // Sol
-            { x: 1780, y: 1200, w: 20, h: 600, type: "rect" }, // Sağ
-            { x: 1200, y: 1800, w: 200, h: 20, type: "rect" }, // Alt Sol
-            { x: 1600, y: 1800, w: 200, h: 20, type: "rect" }, // Alt Sağ (Kapı boşluğu)
+            // KAFETERYA DUVARLARI (Koridor girişli)
+            { x: 1750, y: 1200, w: 500, h: 20, type: "rect" }, // Üst Duvar
+            { x: 1750, y: 1200, w: 20, h: 200, type: "rect" }, // Sol Üst (Medbay Yolu başı)
+            { x: 1750, y: 1600, w: 20, h: 250, type: "rect" }, // Sol Alt
+            { x: 2230, y: 1200, w: 20, h: 200, type: "rect" }, // Sağ Üst (Weapons Yolu başı)
+            { x: 2230, y: 1600, w: 20, h: 250, type: "rect" }, // Sağ Alt (Admin Yolu başı)
 
-            // DİĞER ODALAR (TASLAK)
-            { x: 900, y: 1400, w: 250, h: 300, type: "rect", label: "MedBay" }, // Medbay
-            { x: 1850, y: 1300, w: 300, h: 200, type: "rect", label: "O2" },     // O2
-            { x: 1850, y: 1000, w: 400, h: 250, type: "rect", label: "Weapons"} // Weapons
+            // SOL KORİDOR & MEDBAY
+            { x: 1400, y: 1400, w: 350, h: 20, type: "rect" }, // Koridor Üst
+            { x: 1400, y: 1600, w: 350, h: 20, type: "rect" }, // Koridor Alt
+            { x: 1100, y: 1300, w: 300, h: 400, type: "rect", label: "MEDBAY" },
+
+            // SAĞ KORİDOR & WEAPONS
+            { x: 2250, y: 1300, w: 300, h: 20, type: "rect" }, // Üst Koridor
+            { x: 2550, y: 1100, w: 300, h: 300, type: "rect", label: "WEAPONS" },
+
+            // ALT KORİDOR & ADMIN
+            { x: 2100, y: 1850, w: 20, h: 300, type: "rect" }, 
+            { x: 2100, y: 2150, w: 300, h: 250, type: "rect", label: "ADMIN" }
         ];
 
         socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
@@ -60,10 +66,9 @@
                 const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
                 const dx = tx - joystick.baseX, dy = ty - joystick.baseY;
                 const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > joystick.size) {
-                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
-                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
-                } else { joystick.currX = tx; joystick.currY = ty; }
+                const max = joystick.size;
+                if (dist > max) { joystick.currX = joystick.baseX + (dx/dist)*max; joystick.currY = joystick.baseY + (dy/dist)*max; }
+                else { joystick.currX = tx; joystick.currY = ty; }
             }
         });
         window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
@@ -76,7 +81,7 @@
                     if (nx > obs.x - 15 && nx < obs.x + obs.w + 15 && ny > obs.y - 15 && ny < obs.y + obs.h + 15) return true;
                 }
             }
-            return nx < 50 || nx > MAP_SIZE-50 || ny < 50 || ny > MAP_SIZE-50;
+            return nx < 100 || nx > MAP_SIZE-100 || ny < 100 || ny > MAP_SIZE-100;
         }
 
         function update() {
@@ -93,10 +98,7 @@
                     }
                 }
             }
-            if (players[myId]) { 
-                camera.x = players[myId].x - canvas.width/2; 
-                camera.y = players[myId].y - canvas.height/2; 
-            }
+            if (players[myId]) { camera.x = players[myId].x - canvas.width/2; camera.y = players[myId].y - canvas.height/2; }
         }
 
         function drawMap() {
@@ -115,8 +117,8 @@
                     ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
                     ctx.strokeStyle = "#111"; ctx.lineWidth = 3; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
                     if(obs.label) {
-                        ctx.fillStyle = "white"; ctx.font = "20px Arial";
-                        ctx.fillText(obs.label, obs.x + 10, obs.y + 30);
+                        ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.font = "bold 25px Arial";
+                        ctx.fillText(obs.label, obs.x + 20, obs.y + 40);
                     }
                 }
             });
@@ -133,7 +135,7 @@
             }
             ctx.restore();
             update();
-            // Joystick
+            // Joystick Draw
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stickSize, 0, Math.PI*2); ctx.fillStyle = "rgba(0,150,255,0.7)"; ctx.fill();
             requestAnimationFrame(loop);
