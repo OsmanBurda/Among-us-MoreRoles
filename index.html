@@ -1,124 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us Osman Edition</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
-        canvas { display: block; }
-        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 10px; background: red; color: white; border: none; border-radius: 5px; z-index: 100; font-weight: bold; }
-        #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.2); color: white; border-radius: 5px; z-index: 100; }
-    </style>
+<meta charset="UTF-8">
+<title>Online Game</title>
 </head>
 <body>
-    <div id="howToPlay">How to Play: Use Joystick to Move</div>
-    <button id="adminBtn" onclick="alert('Panel Şifresi: 123Osman123Burda')">ADMİN</button>
 
-    <canvas id="game"></canvas>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+<canvas id="game" width="600" height="400"></canvas>
 
-        let players = {};
-        let myId;
-        const camera = { x: 0, y: 0 };
-
-        // 2.5 KAT ÖLÇEKLENDİRİLMİŞ KORDİNATLAR
-        const colliders = [
-          { x: 0, y: 0, w: 1500, h: 50 }, { x: 0, y: 950, w: 1500, h: 50 },
-          { x: 0, y: 0, w: 50, h: 1000 }, { x: 1450, y: 0, w: 50, h: 1000 },
-          { x: 450, y: 100, w: 600, h: 50, label: "CAFETERIA" },
-          { x: 450, y: 100, w: 50, h: 350 }, { x: 1000, y: 100, w: 50, h: 350 },
-          { x: 450, y: 400, w: 600, h: 50 },
-          // Masalar
-          { x: 580, y: 130, w: 90, h: 90, isObj: true }, { x: 780, y: 130, w: 90, h: 90, isObj: true },
-          { x: 680, y: 230, w: 90, h: 90, isObj: true }, { x: 580, y: 330, w: 90, h: 90, isObj: true },
-          { x: 780, y: 330, w: 90, h: 90, isObj: true },
-          // Odalar
-          { x: 1050, y: 100, w: 300, h: 50, label: "WEAPONS" },
-          { x: 350, y: 400, w: 100, h: 250, label: "MEDBAY" },
-          { x: 500, y: 600, w: 500, h: 50, label: "STORAGE" },
-          { x: 1050, y: 500, w: 300, h: 50, label: "ADMIN" }
-        ];
-
-        const joystick = { active: false, baseX: 80, baseY: canvas.height - 80, currX: 80, currY: canvas.height - 80, size: 40 };
-
-        socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
-        socket.on('playerMoved', (p) => { players[p.id] = p; });
-        socket.on('playerDisconnected', (id) => { delete players[id]; });
-
-        function update() {
-            if (joystick.active && players[myId]) {
-                const dx = (joystick.currX - joystick.baseX) / joystick.size;
-                const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                const nx = players[myId].x + dx * 6; 
-                const ny = players[myId].y + dy * 6;
-                
-                let collision = false;
-                for (let c of colliders) {
-                    if (nx > c.x-15 && nx < c.x + c.w+15 && ny > c.y-20 && ny < c.y + c.h+20) collision = true;
-                }
-                if (!collision) {
-                    players[myId].x = nx; players[myId].y = ny;
-                    socket.emit('playerMovement', { x: nx, y: ny });
-                }
-            }
-            if (players[myId]) {
-                camera.x = players[myId].x - canvas.width / 2;
-                camera.y = players[myId].y - canvas.height / 2;
-            }
-        }
-
-        function loop() {
-            ctx.fillStyle = "#111"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.save(); ctx.translate(-camera.x, -camera.y);
-
-            colliders.forEach(c => {
-                ctx.fillStyle = c.label ? "rgba(46, 204, 113, 0.2)" : "#333";
-                ctx.fillRect(c.x, c.y, c.w, c.h);
-                if(c.label) {
-                    ctx.fillStyle = "white"; ctx.font = "bold 20px Arial";
-                    ctx.fillText(c.label, c.x + 10, c.y + 35);
-                }
-            });
-
-            for (let id in players) {
-                const p = players[id];
-                ctx.fillStyle = p.color; ctx.fillRect(p.x-15, p.y-20, 30, 40);
-                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x, p.y-10, 12, 10);
-                ctx.fillStyle = "white"; ctx.font = "14px Arial"; ctx.textAlign = "center";
-                ctx.fillText(p.name, p.x, p.y - 30);
-            }
-            ctx.restore();
-
-            // Joystick Draw
-            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fill();
-
-            update(); requestAnimationFrame(loop);
-        }
-
-        window.addEventListener("touchstart", e => { joystick.active = true; });
-        window.addEventListener("touchmove", e => {
-            if (joystick.active) {
-                const t = e.touches[0];
-                const dx = t.clientX - joystick.baseX, dy = t.clientY - joystick.baseY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > joystick.size) {
-                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
-                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
-                } else { joystick.currX = t.clientX; joystick.currY = t.clientY; }
-            }
-        });
-        window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
-
-        loop();
-    </script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/client.js"></script>
 </body>
 </html>
