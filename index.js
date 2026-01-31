@@ -9,29 +9,21 @@ let players = {};
 const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
 
 io.on('connection', (socket) => {
-    // Kafeterya masasının hemen yanında güvenli alanda doğuş
     players[socket.id] = {
         id: socket.id,
-        x: 2350, 
-        y: 1700,
+        x: 1500, // 300 * 5 = 1500 (Yeni Merkez)
+        y: 500,  // 100 * 5 = 500
         color: colors[Math.floor(Math.random() * colors.length)],
         name: "Osman"
     };
-
     io.emit('currentPlayers', players);
-
-    socket.on('playerMovement', (movementData) => {
+    socket.on('playerMovement', (data) => {
         if (players[socket.id]) {
-            players[socket.id].x = movementData.x;
-            players[socket.id].y = movementData.y;
+            players[socket.id].x = data.x; players[socket.id].y = data.y;
             socket.broadcast.emit('playerMoved', players[socket.id]);
         }
     });
-
-    socket.on('disconnect', () => {
-        delete players[socket.id];
-        io.emit('playerDisconnected', socket.id);
-    });
+    socket.on('disconnect', () => { delete players[socket.id]; io.emit('playerDisconnected', socket.id); });
 });
 
-http.listen(process.env.PORT || 3000, () => console.log('Server Hazır!'));
+http.listen(process.env.PORT || 3000, () => console.log('Büyük Harita Yayında!'));
