@@ -2,15 +2,16 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us HD - Osman</title>
+    <title>Among Us - Kod Harita</title>
     <style>
-        body { margin: 0; background: #0b0d11; overflow: hidden; touch-action: none; font-family: 'Segoe UI', sans-serif; }
-        #adminBtn { position: fixed; top: 15px; right: 15px; padding: 12px 20px; background: #ff4757; color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 100; box-shadow: 0 4px 15px rgba(255,71,87,0.3); }
-        #howToPlay { position: fixed; top: 15px; left: 15px; padding: 10px 15px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 8px; z-index: 100; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
+        body { margin: 0; background: #141414; overflow: hidden; touch-action: none; font-family: sans-serif; }
+        canvas { display: block; }
+        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 12px; background: #ff4757; color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 100; }
+        #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 5px; z-index: 100; font-size: 12px; }
     </style>
 </head>
 <body>
-    <div id="howToPlay">How to Play: Use Joystick</div>
+    <div id="howToPlay">Joystick ile hareket et</div>
     <button id="adminBtn">ADMİN</button>
     <canvas id="game"></canvas>
 
@@ -19,91 +20,149 @@
         const socket = io();
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
         let players = {};
         let myId;
         const camera = { x: 0, y: 0 };
-        const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
+        
+        // --- HARİTA DUVARLARI VE EŞYALAR ---
+        // type: 1 -> DUVAR (Siyah, geçilmez)
+        // type: 2 -> EŞYA/MASA (Gri, geçilmez, dekor)
+        const mapObjects = [
+            // 1. KAFETERYA SINIRLARI (Yukarı kaçış yok)
+            { x: 800, y: 100, w: 600, h: 50, type: 1 },  // Üst Duvar (KAPALI)
+            { x: 800, y: 100, w: 50, h: 600, type: 1 },  // Sol Duvar
+            { x: 1350, y: 100, w: 50, h: 600, type: 1 }, // Sağ Duvar
+            { x: 800, y: 700, w: 200, h: 50, type: 1 },  // Alt Sol çıkıntı
+            { x: 1200, y: 700, w: 200, h: 50, type: 1 }, // Alt Sağ çıkıntı
 
-        // HD ZEMİN ÇİZİCİ (Pikselleşmeyi engelleyen sihir)
-        function drawGrid() {
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-            ctx.lineWidth = 2;
-            const gridSize = 100;
-            for (let x = 0; x <= 2000; x += gridSize) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1200); ctx.stroke();
-            }
-            for (let y = 0; y <= 1200; y += gridSize) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(2000, y); ctx.stroke();
-            }
-        }
+            // 2. KAFETERYA MASALARI (Engel)
+            { x: 950, y: 300, w: 100, h: 100, type: 2 }, // Sol üst masa
+            { x: 1150, y: 300, w: 100, h: 100, type: 2 }, // Sağ üst masa
+            { x: 1050, y: 500, w: 100, h: 100, type: 2 }, // Alt orta masa
+
+            // 3. UPPER ENGINE (Sol Koridor)
+            { x: 400, y: 300, w: 400, h: 50, type: 1 }, // Koridor üst
+            { x: 400, y: 500, w: 400, h: 50, type: 1 }, // Koridor alt
+            { x: 350, y: 300, w: 50, h: 250, type: 1 }, // Motor odası sol duvar
+
+            // 4. WEAPONS (Sağ Koridor)
+            { x: 1400, y: 300, w: 400, h: 50, type: 1 }, 
+            { x: 1400, y: 500, w: 400, h: 50, type: 1 },
+            { x: 1800, y: 250, w: 50, h: 300, type: 1 }, // Weapons sağ duvar
+            { x: 1600, y: 380, w: 80, h: 80, type: 2 },  // Weapons koltuğu
+
+            // 5. MEDBAY (Aşağı Sol)
+            { x: 700, y: 750, w: 50, h: 400, type: 1 }, // Sol duvar
+            { x: 950, y: 750, w: 50, h: 400, type: 1 }, // Sağ duvar
+            { x: 700, y: 1150, w: 300, h: 50, type: 1 }, // Alt duvar
+            { x: 780, y: 900, w: 100, h: 50, type: 2 },  // Yatak (Engel)
+
+            // 6. STORAGE (Aşağı Orta)
+            { x: 1000, y: 900, w: 200, h: 200, type: 2 }, // Ortadaki kutular (Engel)
+            { x: 900, y: 1300, w: 400, h: 50, type: 1 }   // Alt sınır
+        ];
+
+        const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
 
         socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
         socket.on('playerMoved', (p) => { players[p.id] = p; });
+        socket.on('playerDisconnected', (id) => { delete players[id]; });
+
+        function update() {
+            if (joystick.active && players[myId]) {
+                const dx = (joystick.currX - joystick.baseX) / joystick.size;
+                const dy = (joystick.currY - joystick.baseY) / joystick.size;
+                const speed = 7; // Hıza dokunmadım
+                const nx = players[myId].x + dx * speed;
+                const ny = players[myId].y + dy * speed;
+                
+                let collision = false;
+                // Çarpışma Kontrolü (Duvarlara ve Masalara)
+                for (let obj of mapObjects) {
+                    if (nx > obj.x - 20 && nx < obj.x + obj.w + 20 && 
+                        ny > obj.y - 20 && ny < obj.y + obj.h + 20) {
+                        collision = true;
+                        break;
+                    }
+                }
+                
+                if (!collision) {
+                    players[myId].x = nx; players[myId].y = ny;
+                    socket.emit('playerMovement', { x: nx, y: ny });
+                }
+            }
+            if (players[myId]) {
+                camera.x = players[myId].x - canvas.width / 2;
+                camera.y = players[myId].y - canvas.height / 2;
+            }
+        }
 
         function loop() {
-            if (!players[myId]) return requestAnimationFrame(loop);
-            camera.x = players[myId].x - canvas.width / 2;
-            camera.y = players[myId].y - canvas.height / 2;
-
-            ctx.fillStyle = "#0b0d11"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.save(); ctx.translate(-camera.x, -camera.y);
-
-            // 1. Zemin ve Odalar (HD Kodlama)
-            drawGrid();
+            // Zemin Rengi (Hafif gri metalik)
+            ctx.fillStyle = "#2c3e50"; 
+            ctx.fillRect(0,0,canvas.width,canvas.height);
             
-            // Cafeteria Alanı (Görsel temsil)
-            ctx.fillStyle = "rgba(46, 204, 113, 0.1)";
-            ctx.fillRect(700, 200, 600, 400); 
-            ctx.strokeStyle = "#2ecc71"; ctx.lineWidth = 5;
-            ctx.strokeRect(700, 200, 600, 400);
+            ctx.save(); 
+            ctx.translate(-camera.x, -camera.y);
 
-            // Oyuncular
+            // --- HARİTAYI ÇİZ ---
+            mapObjects.forEach(obj => {
+                if (obj.type === 1) {
+                    // DUVARLAR (Koyu Mavi/Siyah)
+                    ctx.fillStyle = "#1a1a2e";
+                    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+                    ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
+                    ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                } else if (obj.type === 2) {
+                    // EŞYALAR/MASALAR (Metalik Gri)
+                    ctx.fillStyle = "#95a5a6";
+                    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+                    ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth = 2;
+                    ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                }
+            });
+
+            // ODA İSİMLERİ (Yere yazılı)
+            ctx.fillStyle = "rgba(255,255,255,0.1)"; ctx.font = "bold 40px Arial";
+            ctx.fillText("CAFETERIA", 1000, 250);
+            ctx.fillText("WEAPONS", 1500, 450);
+            ctx.fillText("MEDBAY", 800, 850);
+
+            // OYUNCULAR
             for (let id in players) {
                 const p = players[id];
-                // Karakter Gövdesi
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.roundRect(p.x - 20, p.y - 30, 40, 60, 10);
-                ctx.fill();
-                // Cam (Vizör)
-                ctx.fillStyle = "#87CEEB";
-                ctx.beginPath();
-                ctx.roundRect(p.x + 2, p.y - 15, 22, 18, 5);
-                ctx.fill();
-                // İsim
-                ctx.fillStyle = "white"; ctx.font = "bold 16px Arial"; ctx.textAlign = "center";
+                ctx.fillStyle = p.color; ctx.fillRect(p.x - 20, p.y - 30, 40, 60);
+                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x + 5, p.y - 20, 20, 15);
+                ctx.fillStyle = "white"; ctx.font = "16px Arial"; ctx.textAlign = "center";
                 ctx.fillText(p.name, p.x, p.y - 40);
             }
             ctx.restore();
 
             // Joystick
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 4; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 30, 0, Math.PI*2);
-            ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.stroke();
+            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 25, 0, Math.PI*2);
+            ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fill();
 
-            if (joystick.active) {
-                const dx = (joystick.currX - joystick.baseX) / joystick.size;
-                const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                players[myId].x += dx * 7;
-                players[myId].y += dy * 7;
-                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
-            }
-            requestAnimationFrame(loop);
+            update(); requestAnimationFrame(loop);
         }
 
         window.addEventListener("touchstart", e => { joystick.active = true; });
         window.addEventListener("touchmove", e => {
             if (joystick.active) {
                 const t = e.touches[0];
-                joystick.currX = t.clientX; joystick.currY = t.clientY;
+                const dx = t.clientX - joystick.baseX, dy = t.clientY - joystick.baseY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > joystick.size) {
+                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
+                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
+                } else { joystick.currX = t.clientX; joystick.currY = t.clientY; }
             }
         });
-        window.addEventListener("touchend", () => { 
-            joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; 
-        });
+        window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
 
         loop();
     </script>
