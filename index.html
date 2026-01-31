@@ -1,14 +1,95 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Online Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
+        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 10px; background: red; color: white; border-radius: 5px; z-index: 100; }
+        #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(0,0,0,0.5); color: white; z-index: 100; }
+    </style>
 </head>
 <body>
+    <div id="howToPlay">How to Play: Use Joystick</div>
+    <button id="adminBtn">ADMİN</button>
+    <canvas id="game"></canvas>
 
-<canvas id="game" width="600" height="400"></canvas>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const mapImg = new Image();
+        mapImg.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQQS_9yjMlRhtcZFMPrdVqnJmBMcb7KxWjQ5E9t9nGyw&s=10';
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="/client.js"></script>
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let players = {};
+        let myId;
+        const camera = { x: 0, y: 0 };
+        const joystick = { active: false, baseX: 80, baseY: canvas.height - 80, currX: 80, currY: canvas.height - 80, size: 40 };
+
+        // Engeller (Resmin üzerindeki duvarlar)
+        const colliders = [
+            { x: 600, y: 100, w: 300, h: 250, isObj: true }, // Cafeteria Masaları
+            { x: 0, y: 0, w: 1500, h: 50 } // Üst Sınır
+        ];
+
+        socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
+        socket.on('playerMoved', (p) => { players[p.id] = p; });
+
+        function loop() {
+            if (!players[myId]) return requestAnimationFrame(loop);
+            
+            // Kamera Takibi
+            camera.x = players[myId].x - canvas.width / 2;
+            camera.y = players[myId].y - canvas.height / 2;
+
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+
+            // Harita Resmini Çiz (1500x1000 boyutu ideal)
+            ctx.drawImage(mapImg, 0, 0, 1500, 1000);
+
+            // Oyuncular
+            for (let id in players) {
+                const p = players[id];
+                ctx.fillStyle = p.color; ctx.fillRect(p.x - 15, p.y - 20, 30, 40);
+                ctx.fillStyle = "white"; ctx.fillText(p.name, p.x - 10, p.y - 25);
+            }
+            ctx.restore();
+
+            // Joystick Çizimi
+            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
+            ctx.strokeStyle = "white"; ctx.stroke();
+
+            // Hareket Kontrolü
+            if (joystick.active) {
+                const dx = (joystick.currX - joystick.baseX) / joystick.size;
+                const dy = (joystick.currY - joystick.baseY) / joystick.size;
+                players[myId].x += dx * 5;
+                players[myId].y += dy * 5;
+                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener("touchstart", e => { joystick.active = true; });
+        window.addEventListener("touchmove", e => {
+            if (joystick.active) {
+                joystick.currX = e.touches[0].clientX;
+                joystick.currY = e.touches[0].clientY;
+            }
+        });
+        window.addEventListener("touchend", () => { 
+            joystick.active = false; 
+            joystick.currX = joystick.baseX; 
+            joystick.currY = joystick.baseY; 
+        });
+
+        loop();
+    </script>
 </body>
 </html>
