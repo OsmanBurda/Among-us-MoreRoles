@@ -2,13 +2,23 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - The Skeld Full Map</title>
+    <title>The Skeld - Osman Edition</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
+        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 12px; background: #e74c3c; color: white; border: 2px solid #c0392b; border-radius: 8px; font-weight: bold; z-index: 100; }
+        #adminPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; background: rgba(0,0,0,0.95); border: 3px solid #3498db; color: white; padding: 20px; display: none; z-index: 101; text-align: center; border-radius: 15px; }
     </style>
 </head>
 <body>
+    <button id="adminBtn">ADMİN PANEL</button>
+    <div id="adminPanel">
+        <h2>ADMİN KONTROL</h2>
+        <p>Giriş: 123Osman123Burda</p>
+        <button onclick="location.reload()" style="padding:10px;">OYUNU RESETLE</button><br><br>
+        <button onclick="document.getElementById('adminPanel').style.display='none'">KAPAT</button>
+    </div>
+
     <canvas id="game"></canvas>
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -18,79 +28,44 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        document.getElementById('adminBtn').onclick = () => document.getElementById('adminPanel').style.display='block';
+
         let players = {};
         let myId;
-        const MAP_WIDTH = 5000;
-        const MAP_HEIGHT = 3500;
+        const MAP_W = 5000, MAP_H = 3500;
         const camera = { x: 0, y: 0 };
 
-        // HARİTA VERİLERİ: The Skeld'in tamamı
+        // TÜM SKELD ODALARI VE İÇLERİ (Dolu Hali)
         const obstacles = [
-            // --- KAFETERYA (MERKEZ) ---
+            // CAFETERIA
             { x: 2200, y: 1400, w: 600, h: 600, label: "CAFETERIA", isRoom: true },
-            // Masalar
-            { x: 2500, y: 1700, r: 70, type: "circle" }, // Orta
-            { x: 2300, y: 1550, r: 50, type: "circle" }, { x: 2700, y: 1550, r: 50, type: "circle" },
-            { x: 2300, y: 1850, r: 50, type: "circle" }, { x: 2700, y: 1850, r: 50, type: "circle" },
-            // Duvarlar (Girişler açık)
-            { x: 2180, y: 1380, w: 640, h: 20, type: "rect" }, // Üst
-            { x: 2180, y: 2000, w: 640, h: 20, type: "rect" }, // Alt
-            { x: 2180, y: 1380, w: 20, h: 250, type: "rect" }, { x: 2180, y: 1770, w: 20, h: 250, type: "rect" }, // Sol
-            { x: 2800, y: 1380, w: 20, h: 250, type: "rect" }, { x: 2800, y: 1770, w: 20, h: 250, type: "rect" }, // Sağ
+            { x: 2500, y: 1700, r: 60, type: "circle" }, // Orta Masa
+            { x: 2180, y: 1380, w: 640, h: 20, type: "rect" }, // Üst Duvar
+            { x: 2180, y: 2000, w: 640, h: 20, type: "rect" }, // Alt Duvar
 
-            // --- ÜST BÖLÜM ---
-            // Weapons
-            { x: 2850, y: 1100, w: 400, h: 300, label: "WEAPONS", isRoom: true },
-            { x: 3050, y: 1250, r: 30, type: "circle" }, // Koltuk
-            // O2
-            { x: 3300, y: 1450, w: 300, h: 300, label: "O2", isRoom: true },
-            // Navigation
-            { x: 3650, y: 1600, w: 400, h: 400, label: "NAVIGATION", isRoom: true },
-            // Shields
-            { x: 3300, y: 2000, w: 350, h: 350, label: "SHIELDS", isRoom: true },
+            // MEDBAY (Sol Üst)
+            { x: 1600, y: 1400, w: 400, h: 500, label: "MEDBAY", isRoom: true },
+            { x: 1700, y: 1500, w: 60, h: 100, type: "rect" }, // Yatak 1
+            { x: 1850, y: 1700, r: 30, type: "circle" }, // Scanner
 
-            // --- ALT BÖLÜM ---
-            // Admin
-            { x: 2300, y: 2100, w: 400, h: 350, label: "ADMIN", isRoom: true },
-            { x: 2450, y: 2250, w: 150, h: 80, type: "rect" }, // Masa
-            // Storage
-            { x: 2200, y: 2500, w: 600, h: 500, label: "STORAGE", isRoom: true },
-            { x: 2350, y: 2650, w: 100, h: 100, type: "rect" }, { x: 2550, y: 2750, w: 100, h: 100, type: "rect" }, // Kutular
-            // Communications
-            { x: 2600, y: 3050, w: 350, h: 300, label: "COMMUNICATIONS", isRoom: true },
-            // Electrical
-            { x: 1700, y: 2400, w: 450, h: 450, label: "ELECTRICAL", isRoom: true },
-            { x: 1800, y: 2550, w: 50, h: 150, type: "rect" }, // Panel
-            // Lower Engine
-            { x: 1100, y: 2400, w: 500, h: 400, label: "LOWER ENGINE", isRoom: true },
-            
-            // --- SOL BÖLÜM ---
-            // Reactor
-            { x: 500, y: 1900, w: 500, h: 500, label: "REACTOR", isRoom: true },
-            // Security
-            { x: 1200, y: 1900, w: 350, h: 350, label: "SECURITY", isRoom: true },
-            // Upper Engine
-            { x: 1100, y: 1400, w: 500, h: 400, label: "UPPER ENGINE", isRoom: true },
-            // MedBay
-            { x: 1650, y: 1400, w: 450, h: 450, label: "MEDBAY", isRoom: true },
-            { x: 1750, y: 1500, w: 80, h: 50, type: "rect" }, // Yatak
-            { x: 1950, y: 1700, r: 35, type: "circle" }, // Tarayıcı
+            // ELECTRICAL (Sol Alt)
+            { x: 1600, y: 2300, w: 450, h: 500, label: "ELECTRICAL", isRoom: true },
+            { x: 1700, y: 2400, w: 40, h: 120, type: "rect" }, // Panel
+            { x: 1850, y: 2400, w: 40, h: 120, type: "rect" }, // Trafo
 
-            // --- KORİDORLAR VE BAĞLANTILAR ---
-            // Kafeterya - Üst (Weapons)
-            { x: 2500, y: 1000, w: 20, h: 380, type: "rect" }, { x: 2650, y: 1000, w: 20, h: 380, type: "rect" },
-            // Kafeterya - Alt (Admin/Storage)
-            { x: 2450, y: 2020, w: 20, h: 480, type: "rect" }, { x: 2550, y: 2020, w: 20, h: 480, type: "rect" },
-            // Kafeterya - Sol (Medbay/Upper Engine)
-            { x: 1600, y: 1630, w: 580, h: 20, type: "rect" }, { x: 1600, y: 1750, w: 580, h: 20, type: "rect" },
-            // Kafeterya - Sağ (O2/Shields)
-            { x: 2820, y: 1630, w: 480, h: 20, type: "rect" }, { x: 2820, y: 1750, w: 480, h: 20, type: "rect" },
-            // Sol Ana Koridor (Engines - Reactor - Security)
-            { x: 1050, y: 1300, w: 20, h: 1600, type: "rect" }, { x: 1550, y: 1300, w: 20, h: 1600, type: "rect" },
-            // Sağ Ana Koridor (Weapons - O2 - Shields - Nav)
-            { x: 3250, y: 1300, w: 20, h: 800, type: "rect" }, { x: 3600, y: 1300, w: 20, h: 800, type: "rect" },
-            // Alt Ana Koridor (Electrical - Storage - Comms)
-            { x: 1650, y: 2900, w: 1300, h: 20, type: "rect" }, { x: 1650, y: 3000, w: 1300, h: 20, type: "rect" }
+            // WEAPONS (Sağ Üst)
+            { x: 2950, y: 1100, w: 450, h: 400, label: "WEAPONS", isRoom: true },
+            { x: 3200, y: 1200, w: 100, h: 30, type: "rect" }, // Konsol
+
+            // ADMIN (Sağ Alt)
+            { x: 2300, y: 2150, w: 450, h: 400, label: "ADMIN", isRoom: true },
+            { x: 2450, y: 2300, w: 150, h: 80, type: "rect" }, // Admin Masası
+
+            // KORİDORLAR (İçi Dolu Kanallar)
+            { x: 2100, y: 1650, w: 100, h: 100, type: "rect" }, // Batı Koridor Girişi
+            { x: 2800, y: 1650, w: 100, h: 100, type: "rect" }, // Doğu Koridor Girişi
+            { x: 2450, y: 1300, w: 100, h: 100, type: "rect" }, // Kuzey Koridor Girişi
+            { x: 2450, y: 2000, w: 100, h: 150, type: "rect" }  // Güney Koridor Girişi
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
@@ -99,6 +74,7 @@
         socket.on('playerMoved', (p) => { players[p.id] = p; });
         socket.on('playerDisconnected', (id) => { delete players[id]; });
 
+        // Touch Hareketleri
         window.addEventListener("touchstart", (e) => {
             const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
             if (Math.sqrt((tx-joystick.baseX)**2 + (ty-joystick.baseY)**2) < 100) joystick.active = true;
@@ -125,17 +101,15 @@
                     if (nx > obs.x-15 && nx < obs.x+obs.w+15 && ny > obs.y-15 && ny < obs.y+obs.h+15) return true;
                 }
             }
-            // Harita sınırları
-            return nx < 50 || nx > MAP_WIDTH - 50 || ny < 50 || ny > MAP_HEIGHT - 50;
+            return nx < 50 || nx > MAP_W-50 || ny < 50 || ny > MAP_H-50;
         }
 
         function update() {
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX)/joystick.size;
                 const dy = (joystick.currY - joystick.baseY)/joystick.size;
-                const speed = 8; // Hız biraz artırıldı
-                const nextX = players[myId].x + dx * speed;
-                const nextY = players[myId].y + dy * speed;
+                const nextX = players[myId].x + dx * 8;
+                const nextY = players[myId].y + dy * 8;
                 if (!checkCollision(nextX, nextY)) {
                     players[myId].x = nextX; players[myId].y = nextY;
                     socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
@@ -147,18 +121,16 @@
         function loop() {
             ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
             ctx.save(); ctx.translate(-camera.x, -camera.y);
-            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0,0,MAP_WIDTH,MAP_HEIGHT);
+            ctx.fillStyle = "#1e272e"; ctx.fillRect(0,0,MAP_W,MAP_H);
             
             obstacles.forEach(obs => {
                 if(obs.isRoom) {
-                    ctx.strokeStyle = "#3498db"; ctx.lineWidth = 4; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.fillStyle = "rgba(52, 152, 219, 0.1)"; ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                    ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.fillText(obs.label, obs.x + 10, obs.y + 30);
+                    ctx.strokeStyle = "#00d2ff"; ctx.lineWidth = 5; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.fillStyle = "white"; ctx.font = "bold 22px Arial"; ctx.fillText(obs.label, obs.x + 15, obs.y + 40);
                 } else {
-                    ctx.fillStyle = "#34495e"; // Duvar rengi
+                    ctx.fillStyle = "#485460";
                     if(obs.type === "circle") {
                         ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI*2); ctx.fill();
-                        ctx.strokeStyle = "#2c3e50"; ctx.lineWidth = 2; ctx.stroke();
                     } else { ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
                 }
             });
@@ -172,8 +144,9 @@
             }
             ctx.restore();
             update();
+            // Joystick Draw
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2); ctx.strokeStyle = "white"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(52, 152, 219, 0.5)"; ctx.fill();
+            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, joystick.stick, 0, Math.PI*2); ctx.fillStyle = "rgba(0,255,136,0.5)"; ctx.fill();
             requestAnimationFrame(loop);
         }
         loop();
