@@ -4,18 +4,20 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
 
+// Statik dosyaları (html, css) sunucuya tanıtıyoruz
 app.use(express.static(__dirname));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// Ana sayfaya girince index.html'i gönder
+app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
 let players = {};
 
 io.on('connection', (socket) => {
+    console.log('Oyuncu bağlandı:', socket.id);
     players[socket.id] = {
-        x: 100,
-        y: 100,
+        x: 100, y: 100,
         color: "#" + Math.floor(Math.random()*16777215).toString(16),
         id: socket.id
     };
@@ -36,4 +38,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log('Server hazır!'));
+http.listen(PORT, () => console.log('Sunucu 3000 portunda hazır!'));
