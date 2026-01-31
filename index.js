@@ -2,28 +2,23 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const path = require('path');
 
-app.use(express.static(__dirname));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.use(express.static(__dirname + '/'));
 
 let players = {};
+const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
 
 io.on('connection', (socket) => {
-    // Doğuş: Masadan uzakta, temiz alan
+    // Her yeni oyuncu kafeteryada başlar (2000, 2000)
     players[socket.id] = {
-        x: 2000, 
-        y: 1850, 
-        color: "#" + Math.floor(Math.random()*16777215).toString(16),
         id: socket.id,
-        name: "Osman"
+        x: 2000,
+        y: 2000,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        name: "Osman" // Varsayılan isim
     };
 
-    socket.emit('currentPlayers', players);
-    socket.broadcast.emit('newPlayer', players[socket.id]);
+    io.emit('currentPlayers', players);
 
     socket.on('playerMovement', (movementData) => {
         if (players[socket.id]) {
@@ -40,4 +35,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log('Başlatıldı!'));
+http.listen(PORT, () => console.log(`Sunucu ${PORT} portunda aktif.`));
