@@ -6,9 +6,21 @@
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
+        /* Admin Paneli Stili */
+        #adminBtn { position: fixed; top: 10px; right: 10px; padding: 10px; background: red; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 100; }
+        #adminPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; background: rgba(0,0,0,0.9); border: 2px solid white; color: white; padding: 20px; display: none; z-index: 101; text-align: center; }
+        #closePanel { margin-top: 10px; background: white; color: black; border: none; padding: 5px 10px; cursor: pointer; }
     </style>
 </head>
 <body>
+    <button id="adminBtn">ADMIN PANEL</button>
+    <div id="adminPanel">
+        <h3>Admin Kontrol</h3>
+        <p>Şifre: 123Osman123Burda</p>
+        <button onclick="alert('Işınlanma Aktif!')">Tümünü Merkeze Çek</button><br><br>
+        <button id="closePanel">Kapat</button>
+    </div>
+
     <canvas id="game"></canvas>
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -18,41 +30,32 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        // Admin Panel Kontrolü
+        const adminBtn = document.getElementById('adminBtn');
+        const adminPanel = document.getElementById('adminPanel');
+        const closePanel = document.getElementById('closePanel');
+
+        adminBtn.onclick = () => adminPanel.style.display = 'block';
+        closePanel.onclick = () => adminPanel.style.display = 'none';
+
         let players = {};
         let myId;
         const MAP_SIZE = 4000;
         const camera = { x: 0, y: 0 };
 
-        // HARİTA: Odalar aynı, koridorlar kanal (dolu), içler eşyalı.
         const obstacles = [
-            // --- MERKEZ: CAFETERIA ---
             { x: 1800, y: 1800, w: 400, h: 400, label: "CAFETERIA", isRoom: true },
-            { x: 1950, y: 1950, w: 100, h: 100, type: "rect" }, // Ana Yemek Masası
-
-            // --- DOLU KANAL KORİDORLAR (Duvarlar yolu oluşturur) ---
-            { x: 1400, y: 1930, w: 400, h: 20, type: "rect" }, { x: 1400, y: 2050, w: 400, h: 20, type: "rect" }, // Sol Kanal
-            { x: 2200, y: 1930, w: 400, h: 20, type: "rect" }, { x: 2200, y: 2050, w: 400, h: 20, type: "rect" }, // Sağ Kanal
-            { x: 1930, y: 1400, w: 20, h: 400, type: "rect" }, { x: 2050, y: 1400, w: 20, h: 400, type: "rect" }, // Üst Kanal
-            { x: 1930, y: 2200, w: 20, h: 400, type: "rect" }, { x: 2050, y: 2200, w: 20, h: 400, type: "rect" }, // Alt Kanal
-
-            // --- ODALAR VE İÇİNDEKİ EŞYALAR (ENGEL) ---
-            // SOL: MEDBAY (İçinde yataklar ve scanner var)
+            { x: 1950, y: 1950, w: 100, h: 100, type: "rect" }, // Masa
+            // Koridorlar
+            { x: 1400, y: 1930, w: 400, h: 20, type: "rect" }, { x: 1400, y: 2050, w: 400, h: 20, type: "rect" },
+            { x: 2200, y: 1930, w: 400, h: 20, type: "rect" }, { x: 2200, y: 2050, w: 400, h: 20, type: "rect" },
+            { x: 1930, y: 1400, w: 20, h: 400, type: "rect" }, { x: 2050, y: 1400, w: 20, h: 400, type: "rect" },
+            { x: 1930, y: 2200, w: 20, h: 400, type: "rect" }, { x: 2050, y: 2200, w: 20, h: 400, type: "rect" },
+            // Odalar
             { x: 800, y: 1800, w: 600, h: 500, label: "MEDBAY", isRoom: true },
-            { x: 850, y: 1850, w: 80, h: 50, type: "rect" }, { x: 850, y: 2000, w: 80, h: 50, type: "rect" }, // Yataklar
-            { x: 1100, y: 2100, r: 40, type: "circle" }, // Scanner
-
-            // SAĞ: WEAPONS (Konsollar ve koltuk)
             { x: 2600, y: 1800, w: 600, h: 500, label: "WEAPONS", isRoom: true },
-            { x: 3000, y: 1900, w: 120, h: 30, type: "rect" }, // Silah Paneli
-            { x: 2800, y: 2100, r: 30, type: "circle" }, // Pilot Koltuğu
-
-            // ÜST: ADMIN (Büyük toplantı masası)
             { x: 1750, y: 800, w: 500, h: 600, label: "ADMIN", isRoom: true },
-            { x: 1900, y: 1000, w: 200, h: 80, type: "rect" }, // Toplantı Masası
-
-            // ALT: ELECTRICAL (Trafo kutuları)
-            { x: 1750, y: 2600, w: 500, h: 600, label: "ELECTRICAL", isRoom: true },
-            { x: 1800, y: 2800, w: 40, h: 100, type: "rect" }, { x: 1950, y: 2800, w: 40, h: 100, type: "rect" } // Trafolar
+            { x: 1750, y: 2600, w: 500, h: 600, label: "ELECTRICAL", isRoom: true }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50, stick: 25 };
