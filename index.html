@@ -2,11 +2,11 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Skeld - Osman 1300x1000</title>
+    <title>The Skeld - DEV MAP</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
-        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; font-family: monospace; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
+        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
         #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 5px; z-index: 100; }
     </style>
 </head>
@@ -26,25 +26,21 @@
         let players = {};
         let myId;
         const camera = { x: 0, y: 0 };
-        const MAP_W = 1300;
-        const MAP_H = 1000;
+        
+        // HARİTA BOYUTUNU 3 KATINA ÇIKARDIM
+        const MAP_W = 3900; 
+        const MAP_H = 3000;
+        const SCALE = 3; // Odaları ve mesafeleri 3 kat büyütüyoruz
 
-        // --- SENİN VERDİĞİN 1300x1000 KOORDİNATLARI ---
         const rooms = [
-            { name: "CAFETERIA", x: 650, y: 250, w: 200, h: 180 },
-            { name: "WEAPONS", x: 950, y: 180, w: 150, h: 120 },
-            { name: "O2", x: 880, y: 380, w: 80, h: 80 },
-            { name: "NAVIGATION", x: 1200, y: 450, w: 100, h: 150 },
-            { name: "SHIELDS", x: 980, y: 750, w: 140, h: 140 },
-            { name: "COMMUNICATIONS", x: 800, y: 850, w: 150, h: 100 },
-            { name: "STORAGE", x: 650, y: 780, w: 180, h: 200 },
-            { name: "ADMIN", x: 820, y: 550, w: 120, h: 120 },
-            { name: "ELECTRICAL", x: 420, y: 680, w: 140, h: 160 },
-            { name: "LOWER ENGINE", x: 200, y: 750, w: 180, h: 180 },
-            { name: "UPPER ENGINE", x: 200, y: 180, w: 180, h: 180 },
-            { name: "MEDBAY", x: 420, y: 350, w: 140, h: 180 },
-            { name: "SECURITY", x: 250, y: 480, w: 120, h: 120 },
-            { name: "REACTOR", x: 80, y: 480, w: 120, h: 180 }
+            { name: "CAFETERIA", x: 650*SCALE, y: 250*SCALE, w: 200*SCALE, h: 180*SCALE },
+            { name: "WEAPONS", x: 950*SCALE, y: 180*SCALE, w: 150*SCALE, h: 120*SCALE },
+            { name: "O2", x: 880*SCALE, y: 380*SCALE, w: 80*SCALE, h: 80*SCALE },
+            { name: "NAVIGATION", x: 1200*SCALE, y: 450*SCALE, w: 100*SCALE, h: 150*SCALE },
+            { name: "SHIELDS", x: 980*SCALE, y: 750*SCALE, w: 140*SCALE, h: 140*SCALE },
+            { name: "STORAGE", x: 650*SCALE, y: 780*SCALE, w: 180*SCALE, h: 200*SCALE },
+            { name: "MEDBAY", x: 420*SCALE, y: 350*SCALE, w: 140*SCALE, h: 180*SCALE },
+            { name: "REACTOR", x: 80*SCALE, y: 480*SCALE, w: 120*SCALE, h: 180*SCALE }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
@@ -56,21 +52,19 @@
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX) / joystick.size;
                 const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                const speed = 4.0; 
+                const speed = 12; // Harita büyüdüğü için hızı artırdım
 
-                // Yeni pozisyon hesapla
-                let nx = players[myId].x + dx * speed;
-                let ny = players[myId].y + dy * speed;
+                players[myId].x += dx * speed;
+                players[myId].y += dy * speed;
 
-                // 1300x1000 Sınır Kontrolü (Harita dışına çıkma)
-                if (nx < 20) nx = 20; if (nx > MAP_W - 20) nx = MAP_W - 20;
-                if (ny < 30) ny = 30; if (ny > MAP_H - 30) ny = MAP_H - 30;
+                // Sınır Kontrolü
+                if (players[myId].x < 0) players[myId].x = 0;
+                if (players[myId].x > MAP_W) players[myId].x = MAP_W;
+                if (players[myId].y < 0) players[myId].y = 0;
+                if (players[myId].y > MAP_H) players[myId].y = MAP_H;
 
-                players[myId].x = nx;
-                players[myId].y = ny;
-
-                socket.emit('playerMovement', { x: nx, y: ny });
-                document.getElementById('coordInfo').innerText = `X: ${Math.round(nx)} | Y: ${Math.round(ny)}`;
+                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                document.getElementById('coordInfo').innerText = `X: ${Math.round(players[myId].x)} | Y: ${Math.round(players[myId].y)}`;
             }
             if (players[myId]) {
                 camera.x = players[myId].x - canvas.width / 2;
@@ -79,46 +73,42 @@
         }
 
         function loop() {
-            // Arka plan (Uzay boşluğu)
             ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
             if (!players[myId]) return requestAnimationFrame(loop);
 
             ctx.save(); ctx.translate(-camera.x, -camera.y);
 
-            // Harita Zemini (1300x1000 Alanı)
-            ctx.fillStyle = "#161b22";
-            ctx.fillRect(0, 0, MAP_W, MAP_H);
-            ctx.strokeStyle = "#30363d"; ctx.lineWidth = 5;
-            ctx.strokeRect(0, 0, MAP_W, MAP_H);
-
-            // Odaları Çiz
+            // Zemin
+            ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, MAP_W, MAP_H);
+            
+            // Odalar
             rooms.forEach(r => {
-                ctx.fillStyle = "rgba(70, 130, 180, 0.15)";
+                ctx.fillStyle = "rgba(70, 130, 180, 0.2)";
                 ctx.fillRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
-                ctx.strokeStyle = "#5865f2"; ctx.lineWidth = 2;
-                ctx.strokeRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
-                
-                ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.textAlign = "center";
-                ctx.fillText(r.name, r.x, r.y);
+                ctx.strokeStyle = "#5865f2"; ctx.strokeRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
+                ctx.fillStyle = "#fff"; ctx.font = "bold 30px Arial";
+                ctx.fillText(r.name, r.x - 50, r.y);
             });
 
-            // Oyuncular
+            // Karakter (BOYUTU KÜÇÜLTTÜM: 20x30)
             for (let id in players) {
                 const p = players[id];
-                ctx.fillStyle = p.color; ctx.fillRect(p.x - 20, p.y - 30, 40, 60);
-                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x + 5, p.y - 20, 18, 12);
+                ctx.fillStyle = p.color; 
+                ctx.fillRect(p.x - 10, p.y - 15, 20, 30); // Eski boyutun yarısı
+                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x + 2, p.y - 10, 8, 6);
             }
             ctx.restore();
 
-            // Joystick
+            // Joystick Çizimi...
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.stroke();
+            ctx.strokeStyle = "white"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
             ctx.fillStyle = "white"; ctx.fill();
 
             update(); requestAnimationFrame(loop);
         }
 
+        // Joystick eventleri (touchstart, move, end) buraya gelecek...
         window.addEventListener("touchstart", e => { joystick.active = true; });
         window.addEventListener("touchmove", e => {
             if (joystick.active) {
