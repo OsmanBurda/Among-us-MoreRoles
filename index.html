@@ -1,138 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Osman - The Skeld 3900x3000</title>
+    <meta charset="UTF-8">
+    <title>Among Us Harita Modeli - Osman</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
-        canvas { display: block; }
-        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; font-family: monospace; }
-        #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 5px; z-index: 100; }
+        /* CSS KİLİDİ - Dokunma */
+        body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
+        #game-container { 
+            width: 3900px; height: 3000px; 
+            position: relative; background: #222;
+            border: 5px solid #444;
+        }
+        
+        /* Odalar */
+        .room { position: absolute; border: 2px solid #555; background: rgba(100, 100, 100, 0.2); color: white; display: flex; align-items: center; justify-content: center; text-align: center; }
+        
+        /* Eşyalar */
+        .item { position: absolute; width: 40px; height: 40px; background: gold; border-radius: 50%; border: 2px solid white; }
+
+        /* "How to Play" Menüsü - Silinmez */
+        #how-to-play {
+            position: fixed; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.8); color: white;
+            padding: 15px; border: 2px solid #00f; z-index: 1000;
+        }
     </style>
 </head>
 <body>
-    <div id="howToPlay">Menü: How to Play (Sabit)</div>
-    <div id="coordInfo">X: 0 | Y: 0</div>
-    <canvas id="game"></canvas>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+<div id="how-to-play">
+    <h3>Nasıl Oynanır?</h3>
+    <p>WASD ile hareket et (Simülasyon)</p>
+</div>
 
-        let players = {}; let myId;
-        const camera = { x: 0, y: 0 };
-        const MAP_W = 3900; const MAP_H = 3000;
+<div id="game-container">
+    </div>
 
-        // --- VERDİĞİN VERİLERLE ODA VE KORİDORLAR ---
-        const mapElements = [
-            // Odalar (Kutu Çizimler)
-            { n: "CAFETERIA", x: 1750, y: 550, w: 400, h: 400, c: "#34495e" },
-            { n: "REACTOR", x: 100, y: 1250, w: 300, h: 380, c: "#c0392b" },
-            { n: "SECURITY", x: 650, y: 1300, w: 200, h: 280, c: "#2980b9" },
-            { n: "MEDBAY", x: 1100, y: 900, w: 300, h: 300, c: "#27ae60" },
-            { n: "ELECTRICAL", x: 1100, y: 1900, w: 300, h: 300, c: "#f1c40f" },
-            { n: "ADMIN", x: 2300, y: 1500, w: 300, h: 300, c: "#8e44ad" },
-            { n: "NAVIGATION", x: 3450, y: 1200, w: 300, h: 300, c: "#d35400" },
-            // Koridorlar (Görsel Alanlar)
-            { n: "Motor Koridoru", x: 900, y: 540, w: 200, h: 1710, c: "#2c3e50" },
-            { n: "Üst Geçiş", x: 1400, y: 600, w: 400, h: 300, c: "#2c3e50" },
-            { n: "Alt Geçiş", x: 1400, y: 2100, w: 400, h: 300, c: "#2c3e50" }
-        ];
+<script>
+// JS KİLİDİ - Dokunma
+const MAP_WIDTH = 3900;
+const MAP_HEIGHT = 3000;
 
-        // --- DUVARLAR (Çarpışma ve Sınır) ---
-        const walls = [
-            { x: 600, y: 300, w: 2400, h: 30 },   // Üst Sınır
-            { x: 600, y: 2700, w: 2400, h: 30 },  // Alt Sınır
-            { x: 100, y: 1000, w: 30, h: 800 },   // Sol Sınır
-            { x: 3800, y: 1200, w: 30, h: 400 },  // Sağ Sınır
-            // Oda Duvarları (Verdiğin Aralıklar)
-            { x: 1100, y: 1900, w: 300, h: 10 }, { x: 1100, y: 2200, w: 300, h: 10 }, // Elec
-            { x: 1100, y: 900, w: 300, h: 10 },  { x: 1100, y: 1200, w: 300, h: 10 }, // Med
-            { x: 650, y: 1300, w: 200, h: 10 },  { x: 650, y: 1600, w: 200, h: 10 }   // Sec
-        ];
+const rooms = [
+    { name: "Cafeteria", x: 1950, y: 750, w: 600, h: 500 },
+    { name: "Reactor", x: 240, y: 1440, w: 300, h: 400 },
+    { name: "Upper Engine", x: 600, y: 540, w: 400, h: 400 },
+    { name: "Lower Engine", x: 600, y: 2250, w: 400, h: 400 },
+    { name: "Security", x: 750, y: 1440, w: 250, h: 300 },
+    { name: "MedBay", x: 1260, y: 1050, w: 300, h: 400 },
+    { name: "Electrical", x: 1260, y: 2040, w: 350, h: 400 },
+    { name: "Storage", x: 1950, y: 2340, w: 500, h: 500 },
+    { name: "Admin", x: 2460, y: 1650, w: 300, h: 300 },
+    { name: "O2", x: 2640, y: 1140, w: 200, h: 250 },
+    { name: "Weapons", x: 2850, y: 540, w: 400, h: 400 },
+    { name: "Shields", x: 2940, y: 2250, w: 400, h: 400 },
+    { name: "Navigation", x: 3600, y: 1350, w: 300, h: 400 }
+];
 
-        const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
+const container = document.getElementById('game-container');
 
-        socket.on('currentPlayers', (data) => { players = data; myId = socket.id; });
-        socket.on('playerMoved', (p) => { players[p.id] = p; });
+// Odaları Oluştur
+rooms.forEach(room => {
+    const div = document.createElement('div');
+    div.className = 'room';
+    div.style.left = (room.x - room.w/2) + 'px';
+    div.style.top = (room.y - room.h/2) + 'px';
+    div.style.width = room.w + 'px';
+    div.style.height = room.h + 'px';
+    div.innerHTML = `<b>${room.name}</b>`;
+    container.appendChild(div);
 
-        function update() {
-            if (joystick.active && players[myId]) {
-                const dx = (joystick.currX - joystick.baseX) / joystick.size;
-                const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                
-                players[myId].x += dx * 10;
-                players[myId].y += dy * 10;
+    // Eşya/Panel Noktası
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.style.left = (room.x - 20) + 'px';
+    item.style.top = (room.y - 20) + 'px';
+    container.appendChild(item);
+});
 
-                // Harita Sınırı
-                players[myId].x = Math.max(0, Math.min(MAP_W, players[myId].x));
-                players[myId].y = Math.max(0, Math.min(MAP_H, players[myId].y));
+// Duvar Engelleme Mantığı Buraya Eklenebilir
+console.log("Harita 3900x3000 boyutunda yüklendi, Osman.");
+</script>
 
-                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
-                document.getElementById('coordInfo').innerText = `X: ${Math.round(players[myId].x)} | Y: ${Math.round(players[myId].y)}`;
-            }
-            if (players[myId]) {
-                camera.x = players[myId].x - canvas.width / 2;
-                camera.y = players[myId].y - canvas.height / 2;
-            }
-        }
-
-        function loop() {
-            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            if (!players[myId]) return requestAnimationFrame(loop);
-
-            ctx.save(); ctx.translate(-camera.x, -camera.y);
-            
-            // Zemin
-            ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, MAP_W, MAP_H);
-
-            // Odalar ve Koridorlar
-            mapElements.forEach(el => {
-                ctx.fillStyle = el.c; ctx.globalAlpha = 0.4;
-                ctx.fillRect(el.x, el.y, el.w, el.h);
-                ctx.globalAlpha = 1.0; ctx.fillStyle = "white"; ctx.font = "bold 20px Arial";
-                ctx.fillText(el.n, el.x + 10, el.y + 30);
-            });
-
-            // Duvarlar (Kritik Çizgiler)
-            ctx.fillStyle = "#5865f2";
-            walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
-
-            // Karakter (Küçük: 20x30)
-            for (let id in players) {
-                const p = players[id];
-                ctx.fillStyle = p.color; ctx.fillRect(p.x - 10, p.y - 15, 20, 30);
-                ctx.fillStyle = "#87ceeb"; ctx.fillRect(p.x + 2, p.y - 10, 8, 6);
-            }
-            ctx.restore();
-
-            // Joystick...
-            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "white"; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
-            ctx.fillStyle = "white"; ctx.fill();
-
-            update(); requestAnimationFrame(loop);
-        }
-
-        window.addEventListener("touchstart", e => { joystick.active = true; });
-        window.addEventListener("touchmove", e => {
-            if (joystick.active) {
-                const t = e.touches[0];
-                const dx = t.clientX - joystick.baseX, dy = t.clientY - joystick.baseY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > joystick.size) {
-                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
-                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
-                } else { joystick.currX = t.clientX; joystick.currY = t.clientY; }
-            }
-        });
-        window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
-
-        loop();
-    </script>
 </body>
 </html>
