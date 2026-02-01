@@ -2,11 +2,11 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Skeld - DEV MAP</title>
+    <title>The Skeld - Osman Edition 3900x3000</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
-        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
+        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; font-family: monospace; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
         #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 5px; z-index: 100; }
     </style>
 </head>
@@ -26,21 +26,25 @@
         let players = {};
         let myId;
         const camera = { x: 0, y: 0 };
-        
-        // HARİTA BOYUTUNU 3 KATINA ÇIKARDIM
-        const MAP_W = 3900; 
+        const MAP_W = 3900;
         const MAP_H = 3000;
-        const SCALE = 3; // Odaları ve mesafeleri 3 kat büyütüyoruz
 
+        // --- VERDİĞİN NOKTA ATIŞI KOORDİNATLAR ---
         const rooms = [
-            { name: "CAFETERIA", x: 650*SCALE, y: 250*SCALE, w: 200*SCALE, h: 180*SCALE },
-            { name: "WEAPONS", x: 950*SCALE, y: 180*SCALE, w: 150*SCALE, h: 120*SCALE },
-            { name: "O2", x: 880*SCALE, y: 380*SCALE, w: 80*SCALE, h: 80*SCALE },
-            { name: "NAVIGATION", x: 1200*SCALE, y: 450*SCALE, w: 100*SCALE, h: 150*SCALE },
-            { name: "SHIELDS", x: 980*SCALE, y: 750*SCALE, w: 140*SCALE, h: 140*SCALE },
-            { name: "STORAGE", x: 650*SCALE, y: 780*SCALE, w: 180*SCALE, h: 200*SCALE },
-            { name: "MEDBAY", x: 420*SCALE, y: 350*SCALE, w: 140*SCALE, h: 180*SCALE },
-            { name: "REACTOR", x: 80*SCALE, y: 480*SCALE, w: 120*SCALE, h: 180*SCALE }
+            { name: "CAFETERIA", x: 1950, y: 750, w: 450, h: 400 },
+            { name: "WEAPONS", x: 2850, y: 540, w: 350, h: 250 },
+            { name: "O2", x: 2640, y: 1140, w: 180, h: 180 },
+            { name: "NAVIGATION", x: 3600, y: 1350, w: 250, h: 350 },
+            { name: "SHIELDS", x: 2940, y: 2250, w: 300, h: 300 },
+            { name: "COMMUNICATIONS", x: 2400, y: 2550, w: 350, h: 200 },
+            { name: "STORAGE", x: 1950, y: 2340, w: 400, h: 450 },
+            { name: "ADMIN", x: 2460, y: 1650, w: 250, h: 250 },
+            { name: "ELECTRICAL", x: 1260, y: 2040, w: 300, h: 350 },
+            { name: "LOWER ENGINE", x: 600, y: 2250, w: 350, h: 350 },
+            { name: "UPPER ENGINE", x: 600, y: 540, w: 350, h: 350 },
+            { name: "MEDBAY", x: 1260, y: 1050, w: 300, h: 350 },
+            { name: "SECURITY", x: 750, y: 1440, w: 250, h: 250 },
+            { name: "REACTOR", x: 240, y: 1440, w: 250, h: 400 }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
@@ -52,12 +56,12 @@
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX) / joystick.size;
                 const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                const speed = 12; // Harita büyüdüğü için hızı artırdım
+                const speed = 10; // Dev harita için ideal hız
 
                 players[myId].x += dx * speed;
                 players[myId].y += dy * speed;
 
-                // Sınır Kontrolü
+                // Sınırlar
                 if (players[myId].x < 0) players[myId].x = 0;
                 if (players[myId].x > MAP_W) players[myId].x = MAP_W;
                 if (players[myId].y < 0) players[myId].y = 0;
@@ -78,28 +82,31 @@
 
             ctx.save(); ctx.translate(-camera.x, -camera.y);
 
-            // Zemin
+            // Uzay Zemini
             ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, MAP_W, MAP_H);
-            
-            // Odalar
+            ctx.strokeStyle = "#21262d"; ctx.strokeRect(0, 0, MAP_W, MAP_H);
+
+            // Odalar (Merkezlenmiş Çizim)
             rooms.forEach(r => {
-                ctx.fillStyle = "rgba(70, 130, 180, 0.2)";
+                ctx.fillStyle = "rgba(88, 101, 242, 0.1)";
                 ctx.fillRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
-                ctx.strokeStyle = "#5865f2"; ctx.strokeRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
-                ctx.fillStyle = "#fff"; ctx.font = "bold 30px Arial";
-                ctx.fillText(r.name, r.x - 50, r.y);
+                ctx.strokeStyle = "#5865f2"; ctx.lineWidth = 3;
+                ctx.strokeRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
+                
+                ctx.fillStyle = "#fff"; ctx.font = "bold 24px Arial"; ctx.textAlign = "center";
+                ctx.fillText(r.name, r.x, r.y);
             });
 
-            // Karakter (BOYUTU KÜÇÜLTTÜM: 20x30)
+            // Küçük Karakterler (20x30)
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color; 
-                ctx.fillRect(p.x - 10, p.y - 15, 20, 30); // Eski boyutun yarısı
+                ctx.fillRect(p.x - 10, p.y - 15, 20, 30);
                 ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x + 2, p.y - 10, 8, 6);
             }
             ctx.restore();
 
-            // Joystick Çizimi...
+            // Joystick...
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
             ctx.strokeStyle = "white"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
@@ -108,12 +115,16 @@
             update(); requestAnimationFrame(loop);
         }
 
-        // Joystick eventleri (touchstart, move, end) buraya gelecek...
         window.addEventListener("touchstart", e => { joystick.active = true; });
         window.addEventListener("touchmove", e => {
             if (joystick.active) {
                 const t = e.touches[0];
-                joystick.currX = t.clientX; joystick.currY = t.clientY;
+                const dx = t.clientX - joystick.baseX, dy = t.clientY - joystick.baseY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > joystick.size) {
+                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
+                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
+                } else { joystick.currX = t.clientX; joystick.currY = t.clientY; }
             }
         });
         window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
