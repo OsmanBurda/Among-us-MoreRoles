@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Osman - Medbay Update</title>
+    <title>The Skeld - Osman Edition</title>
     <style>
         body { margin: 0; background: #0b0d0f; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -27,16 +27,22 @@
         let myId;
         const camera = { x: 0, y: 0 };
 
-        // --- HARİTA NESNELERİ ---
+        // --- YENİ KOORDİNATLARA GÖRE TAM HARİTA ---
         let mapObjects = [
-            // KAFETERYA (Sabit)
-            { x: 900, y: 100, w: 400, h: 40, type: 1 }, 
-            
-            // MEDBAY (M Harfi ile İşaretlediğin Yer)
-            { x: 500, y: 450, w: 220, h: 200, type: 4 }, // type 4: Medbay Alanı
-            
-            // ADMİN VE DİĞERLERİ
-            { x: 1350, y: 700, w: 250, h: 200, type: 3 }
+            { x: 1000, y: 500, w: 300, h: 250, name: 'CAFETERIA', type: 'room' },
+            { x: 1350, y: 300, w: 200, h: 150, name: 'WEAPONS', type: 'room' },
+            { x: 1250, y: 450, w: 100, h: 100, name: 'O2', type: 'room' },
+            { x: 1550, y: 500, w: 150, h: 150, name: 'NAVIGATION', type: 'room' },
+            { x: 1350, y: 750, w: 180, h: 180, name: 'SHIELDS', type: 'room' },
+            { x: 1150, y: 850, w: 180, h: 120, name: 'COMMUNICATIONS', type: 'room' },
+            { x: 1000, y: 800, w: 250, h: 300, name: 'STORAGE', type: 'room' },
+            { x: 1150, y: 600, w: 180, h: 150, name: 'ADMIN', type: 'room' },
+            { x: 800, y: 700, w: 180, h: 200, name: 'ELECTRICAL', type: 'room' },
+            { x: 600, y: 750, w: 200, h: 200, name: 'LOWER ENGINE', type: 'room' },
+            { x: 600, y: 250, w: 200, h: 200, name: 'UPPER ENGINE', type: 'room' },
+            { x: 800, y: 350, w: 180, h: 200, name: 'MEDBAY', type: 'room' },
+            { x: 550, y: 500, w: 150, h: 150, name: 'SECURITY', type: 'room' },
+            { x: 400, y: 500, w: 150, h: 250, name: 'REACTOR', type: 'room' }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
@@ -49,9 +55,9 @@
                 const dx = (joystick.currX - joystick.baseX) / joystick.size;
                 const dy = (joystick.currY - joystick.baseY) / joystick.size;
                 
-                // HIZ AYARI: 7'den 4.5'e düşürüldü (Daha kontrollü)
-                players[myId].x += dx * 4.5;
-                players[myId].y += dy * 4.5;
+                // Hız Osman'ın kontrolü için 4.0'a çekildi
+                players[myId].x += dx * 4.0;
+                players[myId].y += dy * 4.0;
                 
                 socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
                 document.getElementById('coordInfo').innerText = `X: ${Math.round(players[myId].x)} | Y: ${Math.round(players[myId].y)}`;
@@ -63,36 +69,29 @@
         }
 
         function loop() {
-            ctx.fillStyle = "#161b22"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#0b0d0f"; ctx.fillRect(0,0,canvas.width,canvas.height);
             if (!players[myId]) return requestAnimationFrame(loop);
 
             ctx.save(); ctx.translate(-camera.x, -camera.y);
 
             mapObjects.forEach(obj => {
-                if (obj.type === 1) ctx.fillStyle = "#000"; 
-                else if (obj.type === 4) ctx.fillStyle = "rgba(0, 255, 255, 0.1)"; // Medbay Rengi
-                else ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-                
+                ctx.fillStyle = "rgba(100, 100, 255, 0.05)";
                 ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-                ctx.strokeStyle = "#30363d"; ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
-
-                if(obj.type === 4) {
-                    ctx.fillStyle = "#00ffff"; ctx.font = "14px Arial";
-                    ctx.fillText("MEDBAY", obj.x + 10, obj.y + 25);
-                }
+                ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
+                ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                ctx.fillStyle = "#aaa"; ctx.font = "bold 14px sans-serif";
+                ctx.fillText(obj.name, obj.x + 5, obj.y + 20);
             });
 
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x - 20, p.y - 30, 40, 60);
-                ctx.fillStyle = "yellow"; ctx.font = "12px monospace";
-                ctx.fillText(`X:${Math.round(p.x)} Y:${Math.round(p.y)}`, p.x - 25, p.y - 40);
             }
             ctx.restore();
 
-            // Joystick Çizimi
+            // Joystick Görseli
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.stroke();
+            ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
             ctx.fillStyle = "white"; ctx.fill();
 
