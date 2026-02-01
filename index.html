@@ -2,11 +2,11 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Skeld - Osman Fixed</title>
+    <title>Osman - The Skeld 3900x3000</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
-        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; font-family: monospace; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
+        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; font-family: monospace; }
         #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 5px; z-index: 100; }
     </style>
 </head>
@@ -26,16 +26,32 @@
         const camera = { x: 0, y: 0 };
         const MAP_W = 3900; const MAP_H = 3000;
 
-        // --- DUVARLAR (Artık Görünür ve Sabit) ---
+        // --- VERDİĞİN VERİLERLE ODA VE KORİDORLAR ---
+        const mapElements = [
+            // Odalar (Kutu Çizimler)
+            { n: "CAFETERIA", x: 1750, y: 550, w: 400, h: 400, c: "#34495e" },
+            { n: "REACTOR", x: 100, y: 1250, w: 300, h: 380, c: "#c0392b" },
+            { n: "SECURITY", x: 650, y: 1300, w: 200, h: 280, c: "#2980b9" },
+            { n: "MEDBAY", x: 1100, y: 900, w: 300, h: 300, c: "#27ae60" },
+            { n: "ELECTRICAL", x: 1100, y: 1900, w: 300, h: 300, c: "#f1c40f" },
+            { n: "ADMIN", x: 2300, y: 1500, w: 300, h: 300, c: "#8e44ad" },
+            { n: "NAVIGATION", x: 3450, y: 1200, w: 300, h: 300, c: "#d35400" },
+            // Koridorlar (Görsel Alanlar)
+            { n: "Motor Koridoru", x: 900, y: 540, w: 200, h: 1710, c: "#2c3e50" },
+            { n: "Üst Geçiş", x: 1400, y: 600, w: 400, h: 300, c: "#2c3e50" },
+            { n: "Alt Geçiş", x: 1400, y: 2100, w: 400, h: 300, c: "#2c3e50" }
+        ];
+
+        // --- DUVARLAR (Çarpışma ve Sınır) ---
         const walls = [
-            // Ana Sınırlar
-            { x: 600, y: 400, w: 2250, h: 30 },  { x: 600, y: 2600, w: 2340, h: 30 },
-            { x: 200, y: 540, w: 30, h: 1710 },  { x: 3650, y: 1300, w: 30, h: 100 },
-            // Kritik Oda Duvarları
-            { x: 1100, y: 1900, w: 300, h: 20 }, { x: 1100, y: 2200, w: 300, h: 20 }, // Electrical
-            { x: 1100, y: 900, w: 300, h: 20 },  { x: 1100, y: 1200, w: 300, h: 20 }, // MedBay
-            { x: 650, y: 1300, w: 200, h: 20 },  { x: 650, y: 1600, w: 200, h: 20 },  // Security
-            { x: 2300, y: 1500, w: 300, h: 20 }, { x: 2300, y: 1800, w: 300, h: 20 }  // Admin
+            { x: 600, y: 300, w: 2400, h: 30 },   // Üst Sınır
+            { x: 600, y: 2700, w: 2400, h: 30 },  // Alt Sınır
+            { x: 100, y: 1000, w: 30, h: 800 },   // Sol Sınır
+            { x: 3800, y: 1200, w: 30, h: 400 },  // Sağ Sınır
+            // Oda Duvarları (Verdiğin Aralıklar)
+            { x: 1100, y: 1900, w: 300, h: 10 }, { x: 1100, y: 2200, w: 300, h: 10 }, // Elec
+            { x: 1100, y: 900, w: 300, h: 10 },  { x: 1100, y: 1200, w: 300, h: 10 }, // Med
+            { x: 650, y: 1300, w: 200, h: 10 },  { x: 650, y: 1600, w: 200, h: 10 }   // Sec
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
@@ -47,9 +63,14 @@
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX) / joystick.size;
                 const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                // Hız Osman'ın istediği gibi dengelendi
-                players[myId].x += dx * 8; players[myId].y += dy * 8;
                 
+                players[myId].x += dx * 10;
+                players[myId].y += dy * 10;
+
+                // Harita Sınırı
+                players[myId].x = Math.max(0, Math.min(MAP_W, players[myId].x));
+                players[myId].y = Math.max(0, Math.min(MAP_H, players[myId].y));
+
                 socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
                 document.getElementById('coordInfo').innerText = `X: ${Math.round(players[myId].x)} | Y: ${Math.round(players[myId].y)}`;
             }
@@ -65,12 +86,22 @@
 
             ctx.save(); ctx.translate(-camera.x, -camera.y);
             
-            // Zemin ve Duvar Çizimi
-            ctx.fillStyle = "#1c2128"; ctx.fillRect(0, 0, MAP_W, MAP_H);
-            ctx.fillStyle = "#5865f2"; // Duvar Rengi
+            // Zemin
+            ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+            // Odalar ve Koridorlar
+            mapElements.forEach(el => {
+                ctx.fillStyle = el.c; ctx.globalAlpha = 0.4;
+                ctx.fillRect(el.x, el.y, el.w, el.h);
+                ctx.globalAlpha = 1.0; ctx.fillStyle = "white"; ctx.font = "bold 20px Arial";
+                ctx.fillText(el.n, el.x + 10, el.y + 30);
+            });
+
+            // Duvarlar (Kritik Çizgiler)
+            ctx.fillStyle = "#5865f2";
             walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
 
-            // Oyuncular (Küçük Boyut: 20x30)
+            // Karakter (Küçük: 20x30)
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x - 10, p.y - 15, 20, 30);
@@ -78,9 +109,9 @@
             }
             ctx.restore();
 
-            // Joystick Çizimi
+            // Joystick...
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.stroke();
+            ctx.strokeStyle = "white"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
             ctx.fillStyle = "white"; ctx.fill();
 
