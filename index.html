@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Among Us - Osman Builder</title>
+    <title>Among Us - Osman Map Builder</title>
     <style>
         body { margin: 0; background: #141414; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
@@ -31,22 +31,24 @@
         let myId;
         const camera = { x: 0, y: 0 };
         
-        // --- GÜNCELLENEN HARİTA OBJELERİ ---
+        // --- OSMAN'IN YENİ DÜZENLEMESİ ---
         const mapObjects = [
-            // Kafeterya Ana Alanı
-            { x: 800, y: 100, w: 600, h: 50, type: 1 },  
-            { x: 800, y: 700, w: 200, h: 50, type: 1 },  
-            { x: 1200, y: 700, w: 200, h: 50, type: 1 }, 
+            // KAFETERYA ANA DUVARLAR
+            { x: 800, y: 100, w: 600, h: 40, type: 1 },  
             
-            // Masalar
-            { x: 950, y: 300, w: 100, h: 100, type: 2 }, 
-            { x: 1150, y: 300, w: 100, h: 100, type: 2 }, 
+            // B (BURADAN BURAYA) - İşaretlediğin dikey hat
+            // X: 760 civarı, Y: 120'den 730'a kadar inen dikey duvar
+            { x: 760, y: 120, w: 40, h: 610, type: 1 }, 
 
-            // D (DUVAR) - Yeni eklediğin bölge
+            // D DUVARI - Önceki eklediğimiz
             { x: 1238, y: 825, w: 150, h: 50, type: 1 }, 
 
-            // A (ADMİN) - İşaretlediğin koordinat çevresi
-            { x: 1250, y: 950, w: 200, h: 150, type: 3 }, // type 3: Admin Odası
+            // ADMİN ODASI (A)
+            { x: 1250, y: 950, w: 200, h: 150, type: 3 },
+
+            // MASALAR
+            { x: 950, y: 350, w: 80, h: 80, type: 2 }, 
+            { x: 1150, y: 350, w: 80, h: 80, type: 2 }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
@@ -71,38 +73,43 @@
         }
 
         function loop() {
-            ctx.fillStyle = "#2c3e50"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#1e272e"; ctx.fillRect(0,0,canvas.width,canvas.height);
             if (!players[myId]) return requestAnimationFrame(loop);
 
             ctx.save(); ctx.translate(-camera.x, -camera.y);
 
             mapObjects.forEach(obj => {
-                if (obj.type === 1) ctx.fillStyle = "#1a1a2e"; // Duvar
-                else if (obj.type === 2) ctx.fillStyle = "#95a5a6"; // Masa
-                else if (obj.type === 3) ctx.fillStyle = "rgba(46, 204, 113, 0.2)"; // Admin Odası (Yeşilimsi)
+                if (obj.type === 1) ctx.fillStyle = "#0f172a"; // Koyu Duvar
+                else if (obj.type === 2) ctx.fillStyle = "#718093"; // Gri Masa
+                else if (obj.type === 3) ctx.fillStyle = "rgba(0, 184, 148, 0.3)"; // Admin Alanı
                 
                 ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-                ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
                 
                 if(obj.type === 3) {
-                    ctx.fillStyle = "white"; ctx.font = "20px Arial";
-                    ctx.fillText("ADMIN", obj.x + 60, obj.y + 80);
+                    ctx.fillStyle = "white"; ctx.font = "16px Arial";
+                    ctx.fillText("ADMIN", obj.x + 10, obj.y + 25);
                 }
             });
 
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x - 20, p.y - 30, 40, 60);
-                ctx.fillStyle = "yellow"; ctx.font = "14px monospace"; ctx.textAlign = "center";
+                // Gözlük
+                ctx.fillStyle = "#add8e6"; ctx.fillRect(p.x + 5, p.y - 20, 18, 12);
+                
+                ctx.fillStyle = "yellow"; ctx.font = "bold 13px monospace"; ctx.textAlign = "center";
                 ctx.fillText(`X:${Math.round(p.x)} Y:${Math.round(p.y)}`, p.x, p.y - 45);
-                ctx.fillStyle = "white"; ctx.fillText(p.name, p.x, p.y - 65);
+                ctx.fillStyle = "white"; ctx.font = "14px Arial";
+                ctx.fillText(p.name, p.x, p.y - 65);
             }
             ctx.restore();
 
+            // Joystick Görseli
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
-            ctx.strokeStyle = "white"; ctx.stroke();
+            ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 3; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 25, 0, Math.PI*2);
-            ctx.fillStyle = "white"; ctx.fill();
+            ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.fill();
 
             update(); requestAnimationFrame(loop);
         }
@@ -111,7 +118,12 @@
         window.addEventListener("touchmove", e => {
             if (joystick.active) {
                 const t = e.touches[0];
-                joystick.currX = t.clientX; joystick.currY = t.clientY;
+                const dx = t.clientX - joystick.baseX, dy = t.clientY - joystick.baseY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > joystick.size) {
+                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
+                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
+                } else { joystick.currX = t.clientX; joystick.currY = t.clientY; }
             }
         });
         window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
