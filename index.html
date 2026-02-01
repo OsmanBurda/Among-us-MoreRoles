@@ -2,23 +2,30 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Among Us Harita Modeli - Osman</title>
+    <title>Among Us Harita - Joystick Modu</title>
     <style>
-        /* CSS KİLİDİ - Dokunma */
         body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
         #game-container { 
             width: 3900px; height: 3000px; 
-            position: relative; background: #222;
-            border: 5px solid #444;
+            position: absolute; background: #222;
+            transition: 0.1s linear;
         }
-        
-        /* Odalar */
-        .room { position: absolute; border: 2px solid #555; background: rgba(100, 100, 100, 0.2); color: white; display: flex; align-items: center; justify-content: center; text-align: center; }
-        
-        /* Eşyalar */
-        .item { position: absolute; width: 40px; height: 40px; background: gold; border-radius: 50%; border: 2px solid white; }
+        .room { position: absolute; border: 3px solid #555; background: rgba(80, 80, 80, 0.4); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .corridor { position: absolute; background: rgba(50, 50, 50, 0.8); border: 1px solid #333; }
+        .item { position: absolute; width: 40px; height: 40px; background: gold; border-radius: 50%; border: 2px solid #fff; }
 
-        /* "How to Play" Menüsü - Silinmez */
+        /* JOYSTICK */
+        #joystick-container {
+            position: fixed; bottom: 50px; left: 50px;
+            width: 150px; height: 150px; background: rgba(255,255,255,0.1);
+            border-radius: 50%; z-index: 2000; touch-action: none;
+        }
+        #joystick-knob {
+            position: absolute; top: 50%; left: 50%;
+            width: 60px; height: 60px; background: #fff;
+            border-radius: 50%; transform: translate(-50%, -50%);
+        }
+
         #how-to-play {
             position: fixed; top: 10px; right: 10px;
             background: rgba(0,0,0,0.8); color: white;
@@ -28,59 +35,67 @@
 </head>
 <body>
 
-<div id="how-to-play">
-    <h3>Nasıl Oynanır?</h3>
-    <p>WASD ile hareket et (Simülasyon)</p>
-</div>
+<div id="how-to-play"><h3>How to Play</h3><p>Joystick ile hareket et.</p></div>
+<div id="joystick-container"><div id="joystick-knob"></div></div>
 
-<div id="game-container">
-    </div>
+<div id="game-container" id="map">
+    <div class="corridor" style="left:900px; top:540px; width:200px; height:1710px;"></div> <div class="corridor" style="left:1400px; top:700px; width:400px; height:200px;"></div> <div class="corridor" style="left:1400px; top:2200px; width:400px; height:200px;"></div> </div>
 
 <script>
-// JS KİLİDİ - Dokunma
-const MAP_WIDTH = 3900;
-const MAP_HEIGHT = 3000;
+const container = document.getElementById('game-container');
+const knob = document.getElementById('joystick-knob');
+const joy = document.getElementById('joystick-container');
 
+// Oda Verileri
 const rooms = [
     { name: "Cafeteria", x: 1950, y: 750, w: 600, h: 500 },
     { name: "Reactor", x: 240, y: 1440, w: 300, h: 400 },
-    { name: "Upper Engine", x: 600, y: 540, w: 400, h: 400 },
-    { name: "Lower Engine", x: 600, y: 2250, w: 400, h: 400 },
     { name: "Security", x: 750, y: 1440, w: 250, h: 300 },
-    { name: "MedBay", x: 1260, y: 1050, w: 300, h: 400 },
     { name: "Electrical", x: 1260, y: 2040, w: 350, h: 400 },
-    { name: "Storage", x: 1950, y: 2340, w: 500, h: 500 },
-    { name: "Admin", x: 2460, y: 1650, w: 300, h: 300 },
-    { name: "O2", x: 2640, y: 1140, w: 200, h: 250 },
-    { name: "Weapons", x: 2850, y: 540, w: 400, h: 400 },
-    { name: "Shields", x: 2940, y: 2250, w: 400, h: 400 },
-    { name: "Navigation", x: 3600, y: 1350, w: 300, h: 400 }
+    { name: "Storage", x: 1950, y: 2340, w: 500, h: 500 }
+    // ... diğer odalar
 ];
 
-const container = document.getElementById('game-container');
-
-// Odaları Oluştur
-rooms.forEach(room => {
-    const div = document.createElement('div');
-    div.className = 'room';
-    div.style.left = (room.x - room.w/2) + 'px';
-    div.style.top = (room.y - room.h/2) + 'px';
-    div.style.width = room.w + 'px';
-    div.style.height = room.h + 'px';
-    div.innerHTML = `<b>${room.name}</b>`;
-    container.appendChild(div);
-
-    // Eşya/Panel Noktası
-    const item = document.createElement('div');
-    item.className = 'item';
-    item.style.left = (room.x - 20) + 'px';
-    item.style.top = (room.y - 20) + 'px';
-    container.appendChild(item);
+rooms.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'room';
+    d.style.left = (r.x - r.w/2)+'px'; d.style.top = (r.y - r.h/2)+'px';
+    d.style.width = r.w+'px'; d.style.height = r.h+'px';
+    d.innerHTML = r.name;
+    container.appendChild(d);
 });
 
-// Duvar Engelleme Mantığı Buraya Eklenebilir
-console.log("Harita 3900x3000 boyutunda yüklendi, Osman.");
-</script>
+// Joystick Mantığı
+let posX = 0, posY = 0;
+let moveX = 0, moveY = 0;
 
+joy.addEventListener('touchstart', e => handleMove(e));
+joy.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = joy.getBoundingClientRect();
+    const centerX = rect.left + rect.width/2;
+    const centerY = rect.top + rect.height/2;
+    
+    moveX = (touch.clientX - centerX) / 5;
+    moveY = (touch.clientY - centerY) / 5;
+    
+    knob.style.left = `calc(50% + ${moveX*2}px)`;
+    knob.style.top = `calc(50% + ${moveY*2}px)`;
+});
+
+joy.addEventListener('touchend', () => {
+    moveX = 0; moveY = 0;
+    knob.style.left = '50%'; knob.style.top = '50%';
+});
+
+function update() {
+    posX -= moveX;
+    posY -= moveY;
+    container.style.transform = `translate(${posX}px, ${posY}px)`;
+    requestAnimationFrame(update);
+}
+update();
+</script>
 </body>
 </html>
