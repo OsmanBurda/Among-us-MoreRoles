@@ -2,12 +2,12 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Skeld - Osman Walls & Rooms</title>
+    <title>The Skeld - Osman Fix</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
         canvas { display: block; }
-        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; font-family: monospace; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
-        #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(255,255,255,0.1); color: #ccc; border-radius: 5px; z-index: 100; }
+        #coordInfo { position: fixed; bottom: 10px; left: 10px; color: yellow; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px; z-index: 100; }
+        #howToPlay { position: fixed; top: 10px; left: 10px; padding: 10px; background: rgba(0,0,0,0.5); color: #ccc; border-radius: 5px; z-index: 100; }
     </style>
 </head>
 <body>
@@ -29,30 +29,24 @@
         const MAP_W = 3900;
         const MAP_H = 3000;
 
-        // --- OSMAN'IN ANA DUVAR VE ODA SINIRLARI ---
+        // ANA DUVARLAR (Sadece senin verdiklerin)
         const walls = [
-            // ANA DIŞ DUVARLAR
             { x: 600, y: 400, w: 2250, h: 20 },  // Üst Dış
             { x: 600, y: 2600, w: 2340, h: 20 }, // Alt Dış
             { x: 200, y: 540, w: 20, h: 1710 },  // Sol Dış
-            { x: 3650, y: 1300, w: 20, h: 100 }, // Sağ Dış
+            { x: 3650, y: 1300, w: 20, h: 100 }  // Sağ Dış
+        ];
 
-            // KRİTİK ODA DUVARLARI (Kutu)
-            // Electrical
-            { x: 1100, y: 1900, w: 300, h: 20 }, { x: 1100, y: 2200, w: 300, h: 20 },
-            { x: 1100, y: 1900, w: 20, h: 320 }, { x: 1400, y: 1900, w: 20, h: 320 },
-            // MedBay
-            { x: 1100, y: 900, w: 300, h: 20 }, { x: 1100, y: 1200, w: 300, h: 20 },
-            { x: 1100, y: 900, w: 20, h: 320 }, { x: 1400, y: 900, w: 20, h: 320 },
-            // Security
-            { x: 650, y: 1300, w: 200, h: 20 }, { x: 650, y: 1600, w: 200, h: 20 },
-            { x: 650, y: 1300, w: 20, h: 320 }, { x: 850, y: 1300, w: 20, h: 320 },
-            // Admin
-            { x: 2300, y: 1500, w: 300, h: 20 }, { x: 2300, y: 1800, w: 300, h: 20 },
-            { x: 2300, y: 1500, w: 20, h: 320 }, { x: 2600, y: 1500, w: 20, h: 320 },
-            // Reactor
-            { x: 150, y: 1300, w: 200, h: 20 }, { x: 150, y: 1600, w: 200, h: 20 },
-            { x: 150, y: 1300, w: 20, h: 320 }, { x: 350, y: 1300, w: 20, h: 320 }
+        // ODALAR (Senin koordinat listen)
+        const rooms = [
+            { name: "CAFETERIA", x: 1950, y: 750, w: 400, h: 350 },
+            { name: "WEAPONS", x: 2850, y: 540, w: 300, h: 200 },
+            { name: "O2", x: 2640, y: 1140, w: 150, h: 150 },
+            { name: "NAVIGATION", x: 3600, y: 1350, w: 200, h: 300 },
+            { name: "SHIELDS", x: 2940, y: 2250, w: 250, h: 250 },
+            { name: "ELECTRICAL", x: 1260, y: 2040, w: 250, h: 300 },
+            { name: "MEDBAY", x: 1260, y: 1050, w: 250, h: 300 },
+            { name: "REACTOR", x: 240, y: 1440, w: 200, h: 350 }
         ];
 
         const joystick = { active: false, baseX: 100, baseY: canvas.height - 100, currX: 100, currY: canvas.height - 100, size: 50 };
@@ -64,15 +58,8 @@
             if (joystick.active && players[myId]) {
                 const dx = (joystick.currX - joystick.baseX) / joystick.size;
                 const dy = (joystick.currY - joystick.baseY) / joystick.size;
-                const speed = 10;
-                players[myId].x += dx * speed;
-                players[myId].y += dy * speed;
-
-                // Harita sınırları
-                if (players[myId].x < 0) players[myId].x = 0;
-                if (players[myId].x > MAP_W) players[myId].x = MAP_W;
-                if (players[myId].y < 0) players[myId].y = 0;
-                if (players[myId].y > MAP_H) players[myId].y = MAP_H;
+                players[myId].x += dx * 10;
+                players[myId].y += dy * 10;
 
                 socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
                 document.getElementById('coordInfo').innerText = `X: ${Math.round(players[myId].x)} | Y: ${Math.round(players[myId].y)}`;
@@ -88,25 +75,28 @@
             if (!players[myId]) return requestAnimationFrame(loop);
 
             ctx.save(); ctx.translate(-camera.x, -camera.y);
-
-            // Zemin
             ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, MAP_W, MAP_H);
 
-            // Duvarları Çiz
-            ctx.fillStyle = "#5865f2";
-            walls.forEach(w => {
-                ctx.fillRect(w.x, w.y, w.w, w.h);
+            // Odalar
+            rooms.forEach(r => {
+                ctx.strokeStyle = "#5865f2"; ctx.lineWidth = 4;
+                ctx.strokeRect(r.x - r.w/2, r.y - r.h/2, r.w, r.h);
+                ctx.fillStyle = "white"; ctx.font = "bold 20px Arial";
+                ctx.fillText(r.name, r.x - 40, r.y);
             });
 
-            // Oyuncular (Küçük Boyut)
+            // Duvarlar
+            ctx.fillStyle = "#5865f2";
+            walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+
+            // Karakter (Küçük: 20x30)
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color; ctx.fillRect(p.x - 10, p.y - 15, 20, 30);
-                ctx.fillStyle = "#87CEEB"; ctx.fillRect(p.x + 2, p.y - 10, 8, 6);
             }
             ctx.restore();
 
-            // Joystick
+            // Joystick... (çizim kodları)
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.size, 0, Math.PI*2);
             ctx.strokeStyle = "white"; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 20, 0, Math.PI*2);
@@ -119,12 +109,7 @@
         window.addEventListener("touchmove", e => {
             if (joystick.active) {
                 const t = e.touches[0];
-                const dx = t.clientX - joystick.baseX, dy = t.clientY - joystick.baseY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > joystick.size) {
-                    joystick.currX = joystick.baseX + (dx/dist)*joystick.size;
-                    joystick.currY = joystick.baseY + (dy/dist)*joystick.size;
-                } else { joystick.currX = t.clientX; joystick.currY = t.clientY; }
+                joystick.currX = t.clientX; joystick.currY = t.clientY;
             }
         });
         window.addEventListener("touchend", () => { joystick.active = false; joystick.currX = joystick.baseX; joystick.currY = joystick.baseY; });
